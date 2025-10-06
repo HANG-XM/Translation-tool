@@ -128,8 +128,10 @@ class TranslatorApp:
             
             # APPKEY 标签和输入框
             ttk.Label(config_frame, text="APPKEY:").pack(side=tk.LEFT, padx=5)
-            self.appkey_entry = ttk.Entry(config_frame, width=30, show="*")
-            self.appid_entry.pack(side=tk.LEFT, padx=5)
+            self.appkey_entry = ttk.Entry(config_frame, width=30)
+            self.appkey_entry.pack(side=tk.LEFT, padx=5)
+            # 设置密码显示模式
+            self.appid_entry.configure(show="*")
             
             # 保存配置按钮
             save_btn = ttk.Button(config_frame, text="保存配置", command=self.save_config)
