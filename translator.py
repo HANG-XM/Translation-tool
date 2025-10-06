@@ -88,6 +88,9 @@ class BaiduTranslator:
 
     def _request_translation(self, query, from_lang, to_lang):
         """请求翻译API"""
+        if not self.appid or not self.appkey:
+            return "请先配置API密钥"
+            
         salt = str(random.randint(32768, 65536))
         sign = hashlib.md5(f"{self.appid}{query}{salt}{self.appkey}".encode()).hexdigest()
         

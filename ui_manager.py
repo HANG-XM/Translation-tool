@@ -22,100 +22,202 @@ class UIManager:
     def setup_ui(self):
         """设置用户界面"""
         try:
+            # 设置窗口样式
+            self.root.style.configure('TNotebook', tabposition='nw')
+            self.root.style.configure('TNotebook.Tab', padding=[20, 10])
+            
             main_container = tb.Frame(self.root)
-            main_container.pack(padx=15, pady=15, fill=BOTH, expand=True)
+            main_container.pack(padx=20, pady=20, fill=BOTH, expand=True)
 
-            config_frame = tb.LabelFrame(main_container, text="配置", padding=15, bootstyle=INFO)
-            config_frame.pack(fill=X, pady=(0, 15))
-            
-            config_grid = tb.Frame(config_frame)
-            config_grid.pack(fill=X)
-            
-            tb.Label(config_grid, text="主题:").grid(row=0, column=0, padx=8, sticky=W)
-            self.theme_var = tb.StringVar()
-            self.theme_combo = tb.Combobox(config_grid, width=4, state="readonly",
-                                        textvariable=self.theme_var, bootstyle=PRIMARY)
-            self.theme_combo['values'] = ('白天', '黑夜')
-            self.theme_combo.set('白天')
-            self.theme_combo.grid(row=0, column=1, padx=8)
-            self.theme_combo.bind("<<ComboboxSelected>>", self.on_theme_change)
-            
-            tb.Label(config_grid, text="APPID:").grid(row=0, column=2, padx=(25, 8), sticky=W)
-            self.appid_entry = tb.Entry(config_grid, width=45)
-            self.appid_entry.grid(row=0, column=3, padx=8)
-            
-            tb.Label(config_grid, text="APPKEY:").grid(row=0, column=4, padx=(25, 8), sticky=W)
-            self.appkey_entry = tb.Entry(config_grid, width=45, show="*")
-            self.appkey_entry.grid(row=0, column=5, padx=8)
-            
-            save_btn = tb.Button(config_grid, text="保存配置", command=self.save_config, 
-                            bootstyle=SUCCESS, width=10)
-            save_btn.grid(row=0, column=6, padx=(25, 0))
+            # 创建Notebook
+            self.notebook = tb.Notebook(main_container, bootstyle=INFO)
+            self.notebook.pack(fill=BOTH, expand=True)
 
-            lang_frame = tb.LabelFrame(main_container, text="语言设置", padding=15, bootstyle=INFO)
-            lang_frame.pack(fill=X, pady=(0, 15))
-            
-            lang_grid = tb.Frame(lang_frame)
-            lang_grid.pack(fill=X)
-            
-            tb.Label(lang_grid, text="源语言:").grid(row=0, column=0, padx=8, sticky=W)
-            self.source_lang = tb.Combobox(lang_grid, width=18, state="readonly", bootstyle=INFO)
-            self.source_lang['values'] = ('自动检测', '中文', '英语', '日语', '韩语', '法语', '德语', '俄语', '西班牙语')
-            self.source_lang.set('自动检测')
-            self.source_lang.grid(row=0, column=1, padx=8)
-            
-            tb.Label(lang_grid, text="目标语言:").grid(row=0, column=2, padx=(25, 8), sticky=W)
-            self.target_lang = tb.Combobox(lang_grid, width=18, state="readonly", bootstyle=INFO)
-            self.target_lang['values'] = ('中文', '英语', '日语', '韩语', '法语', '德语', '俄语', '西班牙语')
-            self.target_lang.set('英语')
-            self.target_lang.grid(row=0, column=3, padx=8)
+            # 第一个标签页：截图翻译
+            self.setup_translate_tab()
 
-            text_container = tb.Frame(main_container)
-            text_container.pack(fill=BOTH, expand=True)
+            # 第二个标签页：配置
+            self.setup_config_tab()
 
-            paned_window = tb.PanedWindow(text_container, orient=VERTICAL)
-            paned_window.pack(fill=BOTH, expand=True)
+            # 第三个标签页：关于
+            self.setup_about_tab()
 
-            source_frame = tb.LabelFrame(paned_window, text="源文本", padding=10, bootstyle=PRIMARY)
-            paned_window.add(source_frame, weight=1)
-
-            self.source_text = ScrolledText(source_frame, wrap="word", height=8,
-                                        font=('微软雅黑', 12))
-            self.source_text.pack(padx=10, pady=10, fill=BOTH, expand=True)
-
-            button_frame = tb.Frame(paned_window)
-            button_frame.pack(fill=X, pady=5)
-            paned_window.add(button_frame, weight=0)
-
-            button_container = tb.Frame(button_frame)
-            button_container.pack()
-
-            self.translate_btn = tb.Button(button_container, text="翻译", command=self.translate, 
-                                        bootstyle=PRIMARY, width=18)
-            self.translate_btn.pack(side=LEFT, padx=10)
-
-            clear_btn = tb.Button(button_container, text="清空", command=self.clear_text, 
-                                bootstyle=WARNING, width=18)
-            clear_btn.pack(side=LEFT, padx=10)
-
-            capture_btn = tb.Button(button_container, text="截图翻译", command=self.capture_translate, 
-                                  bootstyle=INFO, width=18)
-            capture_btn.pack(side=LEFT, padx=10)
-
-            target_frame = tb.LabelFrame(paned_window, text="翻译结果", padding=10, bootstyle=PRIMARY)
-            paned_window.add(target_frame, weight=2)
-
-            self.target_text = ScrolledText(target_frame, wrap="word", height=12, 
-                                        font=('微软雅黑', 12))
-            self.target_text.pack(padx=10, pady=10, fill=BOTH, expand=True)
-            
-            config_grid.columnconfigure(3, weight=1)
-            config_grid.columnconfigure(5, weight=1)
-            
             logging.info("界面初始化完成")
         except Exception as e:
             logging.error(f"界面初始化失败: {str(e)}")
             Messagebox.showerror("错误", f"界面初始化失败: {str(e)}")
+
+    def setup_translate_tab(self):
+        """设置截图翻译标签页"""
+        translate_frame = tb.Frame(self.notebook)
+        self.notebook.add(translate_frame, text="📸 截图翻译")
+
+        # 创建顶部工具栏
+        toolbar = tb.Frame(translate_frame, bootstyle=SECONDARY)
+        toolbar.pack(fill=X, padx=15, pady=(15, 5))
+        
+        # 语言选择框架
+        lang_frame = tb.LabelFrame(toolbar, text="语言设置", padding=10, bootstyle=INFO)
+        lang_frame.pack(side=LEFT, padx=5)
+        
+        lang_grid = tb.Frame(lang_frame)
+        lang_grid.pack()
+        
+        tb.Label(lang_grid, text="源语言:").grid(row=0, column=0, padx=5)
+        self.source_lang = tb.Combobox(lang_grid, width=15, state="readonly", bootstyle=INFO)
+        self.source_lang['values'] = ('自动检测', '中文', '英语', '日语', '韩语', '法语', '德语', '俄语', '西班牙语')
+        self.source_lang.set('自动检测')
+        self.source_lang.grid(row=0, column=1, padx=5)
+        
+        tb.Label(lang_grid, text="目标语言:").grid(row=0, column=2, padx=(15, 5))
+        self.target_lang = tb.Combobox(lang_grid, width=15, state="readonly", bootstyle=INFO)
+        self.target_lang['values'] = ('中文', '英语', '日语', '韩语', '法语', '德语', '俄语', '西班牙语')
+        self.target_lang.set('英语')
+        self.target_lang.grid(row=0, column=3, padx=5)
+
+        # 按钮区域
+        button_frame = tb.Frame(toolbar)
+        button_frame.pack(side=RIGHT, padx=5)
+        
+        self.translate_btn = tb.Button(button_frame, text="🔤 翻译", command=self.translate, 
+                                    bootstyle=PRIMARY, width=12)
+        self.translate_btn.pack(side=LEFT, padx=5)
+
+        clear_btn = tb.Button(button_frame, text="🗑️ 清空", command=self.clear_text, 
+                            bootstyle=WARNING, width=12)
+        clear_btn.pack(side=LEFT, padx=5)
+
+        capture_btn = tb.Button(button_frame, text="📷 截图翻译", command=self.capture_translate, 
+                            bootstyle=INFO, width=12)
+        capture_btn.pack(side=LEFT, padx=5)
+
+        # 文本区域
+        text_container = tb.Frame(translate_frame)
+        text_container.pack(fill=BOTH, expand=True, padx=15, pady=(5, 15))
+
+        paned_window = tb.PanedWindow(text_container, orient=VERTICAL)
+        paned_window.pack(fill=BOTH, expand=True)
+
+        source_frame = tb.LabelFrame(paned_window, text="源文本", padding=10, bootstyle=PRIMARY)
+        paned_window.add(source_frame, weight=1)
+
+        self.source_text = ScrolledText(source_frame, wrap="word", height=8,
+                                    font=('微软雅黑', 11))
+        self.source_text.pack(padx=8, pady=8, fill=BOTH, expand=True)
+
+        target_frame = tb.LabelFrame(paned_window, text="翻译结果", padding=10, bootstyle=PRIMARY)
+        paned_window.add(target_frame, weight=2)
+
+        self.target_text = ScrolledText(target_frame, wrap="word", height=12, 
+                                    font=('微软雅黑', 11))
+        self.target_text.pack(padx=8, pady=8, fill=BOTH, expand=True)
+
+    def setup_config_tab(self):
+        """设置配置标签页"""
+        config_frame = tb.Frame(self.notebook)
+        self.notebook.add(config_frame, text="⚙️ 配置")
+
+        config_container = tb.Frame(config_frame)
+        config_container.pack(padx=20, pady=20, fill=BOTH, expand=True)
+
+        # 配置卡片
+        config_card = tb.LabelFrame(config_container, text="API配置", padding=20, bootstyle=INFO)
+        config_card.pack(fill=X, pady=10)
+
+        config_grid = tb.Frame(config_card)
+        config_grid.pack(fill=X)
+
+        # 主题设置
+        theme_frame = tb.LabelFrame(config_grid, text="界面主题", padding=10)
+        theme_frame.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 15))
+        
+        tb.Label(theme_frame, text="选择主题:").pack(side=LEFT, padx=5)
+        self.theme_var = tb.StringVar()
+        self.theme_combo = tb.Combobox(theme_frame, width=10, state="readonly",
+                                    textvariable=self.theme_var, bootstyle=PRIMARY)
+        self.theme_combo['values'] = ('白天', '黑夜')
+        self.theme_combo.set('白天')
+        self.theme_combo.pack(side=LEFT, padx=5)
+        self.theme_combo.bind("<<ComboboxSelected>>", self.on_theme_change)
+        
+        # API设置
+        api_frame = tb.LabelFrame(config_grid, text="百度翻译API", padding=15)
+        api_frame.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 15))
+
+        tb.Label(api_frame, text="APPID:", font=('微软雅黑', 10)).grid(row=0, column=0, sticky=W, padx=5, pady=5)
+        self.appid_entry = tb.Entry(api_frame, width=40, bootstyle=PRIMARY, font=('微软雅黑', 10))
+        self.appid_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+
+        tb.Label(api_frame, text="APPKEY:", font=('微软雅黑', 10)).grid(row=1, column=0, sticky=W, padx=5, pady=5)
+        self.appkey_entry = tb.Entry(api_frame, width=40, show="*", bootstyle=PRIMARY, font=('微软雅黑', 10))
+        self.appkey_entry.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
+        
+        save_btn = tb.Button(config_grid, text="💾 保存配置", command=self.save_config, 
+                            bootstyle=SUCCESS, width=15)
+        save_btn.grid(row=2, column=0, columnspan=2, pady=(15, 0))
+        
+        config_grid.columnconfigure(1, weight=1)
+
+
+    def setup_about_tab(self):
+        """设置关于标签页"""
+        about_frame = tb.Frame(self.notebook)
+        self.notebook.add(about_frame, text="ℹ️ 关于")
+
+        about_container = tb.Frame(about_frame)
+        about_container.pack(padx=20, pady=20, fill=BOTH, expand=True)
+
+        # Logo和标题
+        logo_frame = tb.Frame(about_container)
+        logo_frame.pack(fill=X, pady=(0, 20))
+        
+        title_label = tb.Label(logo_frame, text="翻译工具", 
+                            font=('微软雅黑', 24, 'bold'))
+        title_label.pack()
+        
+        version_label = tb.Label(logo_frame, text="Version 1.0.0", 
+                            font=('微软雅黑', 12))
+        version_label.pack()
+
+        # 信息卡片
+        info_card = tb.LabelFrame(about_container, text="软件信息", padding=20, bootstyle=INFO)
+        info_card.pack(fill=X, pady=10)
+
+        # 作者信息
+        author_frame = tb.Frame(info_card)
+        author_frame.pack(fill=X, pady=5)
+        
+        tb.Label(author_frame, text="作者：", font=('微软雅黑', 10)).pack(side=LEFT)
+        tb.Label(author_frame, text="HANG-XM", font=('微软雅黑', 10, 'bold')).pack(side=LEFT)
+
+        # GitHub链接
+        github_frame = tb.Frame(info_card)
+        github_frame.pack(fill=X, pady=5)
+        
+        tb.Label(github_frame, text="项目地址：", font=('微软雅黑', 10)).pack(side=LEFT)
+        github_link = tb.Label(github_frame, text="https://github.com/HANG-XM/Translation-tool", 
+                            font=('微软雅黑', 10, 'bold'), foreground='blue', cursor='hand2')
+        github_link.pack(side=LEFT)
+        github_link.bind("<Button-1>", lambda e: self._open_link("https://github.com/HANG-XM/Translation-tool"))
+
+        # 功能说明
+        feature_frame = tb.LabelFrame(about_container, text="主要功能", padding=20, bootstyle=INFO)
+        feature_frame.pack(fill=X, pady=10)
+
+        features = [
+            "📸 支持截图翻译功能",
+            "🔤 支持多语言互译",
+            "🎨 支持主题切换",
+            "💾 支持配置保存"
+        ]
+        
+        for feature in features:
+            tb.Label(feature_frame, text=feature, font=('微软雅黑', 10)).pack(anchor=W, pady=2)
+
+    def _open_link(self, url):
+        """打开链接"""
+        import webbrowser
+        webbrowser.open(url)
 
     def on_theme_change(self, event=None):
         """主题切换事件"""
@@ -224,11 +326,19 @@ class UIManager:
         
         selector = tk.Toplevel()
         selector.attributes('-fullscreen', True)
-        selector.attributes('-alpha', 0.4)
+        selector.attributes('-alpha', 0.3)
         selector.configure(background='black')
+        
+        # 设置窗口始终在最前
+        selector.attributes('-topmost', True)
         
         canvas = tk.Canvas(selector, highlightthickness=0)
         canvas.pack(fill=tk.BOTH, expand=True)
+        
+        # 调整截图大小以适应屏幕
+        screen_width = selector.winfo_screenwidth()
+        screen_height = selector.winfo_screenheight()
+        screenshot = screenshot.resize((screen_width, screen_height))
         
         photo = ImageTk.PhotoImage(screenshot)
         canvas.create_image(0, 0, anchor=tk.NW, image=photo)
@@ -264,8 +374,12 @@ class UIManager:
 
     def _create_selection_rect(self, canvas, x1, y1, x2, y2):
         """创建选择框"""
+        # 创建外边框
+        canvas.create_rectangle(x1-1, y1-1, x2+1, y2+1, outline='white', width=1, tags='selection')
+        # 创建主边框
         canvas.create_rectangle(x1, y1, x2, y2, outline='red', width=2, tags='selection')
-        canvas.create_rectangle(x1, y1, x2, y2, fill='white', stipple='gray50', tags='selection')
+        # 创建半透明填充
+        canvas.create_rectangle(x1, y1, x2, y2, fill='white', stipple='gray25', tags='selection')
 
     def _update_selection_rect(self, canvas, x1, y1, x2, y2, size_label):
         """更新选择框"""
@@ -292,10 +406,15 @@ class UIManager:
         width = abs(x2 - x1)
         height = abs(y2 - y1)
         
-        if width < 5 or height < 5:
+        if width < 10 or height < 10:  # 增加最小选择区域
             selector.destroy()
             self.root.deiconify()
             return
+        
+        # 添加选择确认动画
+        canvas.create_rectangle(x, y, x+width, y+height, outline='green', width=3, tags='confirm')
+        selector.update()
+        time.sleep(0.2)  # 短暂延迟以显示确认效果
         
         selected_area = screenshot.crop((x, y, x + width, y + height))
         temp_image = os.path.join('data', 'temp_screenshot.png')

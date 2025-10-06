@@ -66,7 +66,7 @@ def check_directories():
         if not os.path.exists(data_dir):
             os.makedirs(data_dir)
     except Exception as e:
-        Messagebox.showerror("错误", f"创建目录失败: {str(e)}")
+        Messagebox.show_error("错误", f"创建目录失败: {str(e)}")
         raise
 
 class TranslatorApp:
@@ -84,7 +84,7 @@ class TranslatorApp:
         check_directories()
         
         self.ui_manager = UIManager(self.root, self.settings_manager)
-        self.settings_manager.set_theme('light')
+        self.settings_manager.set_theme('flatly')  # 修改为与ttkbootstrap主题名称一致
         self.ui_manager.load_config()
 
 def main():

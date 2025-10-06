@@ -4,7 +4,7 @@ import threading
 import logging
 import time
 from ttkbootstrap.dialogs import Messagebox
-
+import ttkbootstrap as tb
 class ConfigManager:
     """配置文件管理"""
     def __init__(self, config_file):
@@ -74,20 +74,31 @@ class ThemeManager:
     def set_theme(self, theme):
         """设置主题"""
         try:
+            # 保存当前窗口状态
             geometry = self.root.geometry()
+            current_tab = None
             
+            # 获取当前选中的标签页
+            for child in self.root.winfo_children():
+                if isinstance(child, tb.Notebook):
+                    current_tab = child.index(child.select())
+                    break
+            
+            # 切换主题
             if theme == '黑夜':
                 self.root.style.theme_use('darkly')
-                self.root.configure(background='#2b2b2b')
             else:
                 self.root.style.theme_use('flatly')
-                self.root.configure(background='#ffffff')
             
+            # 恢复窗口状态
             self.root.geometry(geometry)
+            if current_tab is not None:
+                self.root.after(100, lambda: child.select(current_tab))
+                
             self.root.update_idletasks()
-            self.root.event_generate('<Configure>')
         except Exception as e:
             logging.error(f"设置主题失败: {str(e)}")
+            raise
 
 class SettingsManager:
     """设置管理器"""
