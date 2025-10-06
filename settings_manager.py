@@ -184,13 +184,18 @@ class SettingsManager:
         """设置主题"""
         self.theme_manager.set_theme(theme)
 
-    def save_all_config(self, appid, appkey, shortcuts, theme):
+    def save_all_config(self, appid, appkey, shortcuts, theme, source_lang=None, target_lang=None):
         """保存所有配置"""
         try:
             config = configparser.ConfigParser()
             config['BaiduAPI'] = {'appid': appid, 'appkey': appkey}
             config['Shortcuts'] = shortcuts
             config['Theme'] = {'theme': theme}
+            if source_lang and target_lang:
+                config['Languages'] = {
+                    'source_lang': source_lang,
+                    'target_lang': target_lang
+                }
             
             temp_file = self.config_manager.config_file + '.tmp'
             with open(temp_file, 'w', encoding='utf-8') as f:
@@ -220,3 +225,41 @@ class SettingsManager:
         except Exception as e:
             logging.error(f"加载主题配置失败: {str(e)}")
             return '白天'
+        
+    def save_languages(self, source_lang, target_lang):
+        """保存语言设置"""
+        try:
+            config = configparser.ConfigParser()
+            config['Languages'] = {
+                'source_lang': source_lang,
+                'target_lang': target_lang
+            }
+            
+            temp_file = self.config_manager.config_file + '.tmp'
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                config.write(f)
+            os.replace(temp_file, self.config_manager.config_file)
+            return True
+        except Exception as e:
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
+            raise e
+
+    def load_languages(self):
+        """加载语言设置"""
+        try:
+            if not os.path.exists(self.config_manager.config_file):
+                return '自动检测', '英语'
+            
+            config = configparser.ConfigParser()
+            config.read(self.config_manager.config_file, encoding='utf-8')
+            
+            if 'Languages' in config:
+                return (
+                    config['Languages'].get('source_lang', '自动检测'),
+                    config['Languages'].get('target_lang', '英语')
+                )
+            return '自动检测', '英语'
+        except Exception as e:
+            logging.error(f"加载语言设置失败: {str(e)}")
+            return '自动检测', '英语'

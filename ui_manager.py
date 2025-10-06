@@ -326,8 +326,12 @@ class UIManager:
             # 保存主题配置
             theme = self.theme_var.get()
             
+            # 保存语言配置
+            source_lang = self.source_lang.get()
+            target_lang = self.target_lang.get()
+
             # 保存所有配置
-            if self.settings_manager.save_all_config(appid, appkey, shortcuts, theme):
+            if self.settings_manager.save_all_config(appid, appkey, shortcuts, theme, source_lang, target_lang):
                 self.translator = BaiduTranslator(appid, appkey)
                 Messagebox.show_info("成功", "配置已保存")
         except Exception as e:
@@ -360,6 +364,11 @@ class UIManager:
             self.theme_var.set(theme)
             self.settings_manager.set_theme(theme)
             
+            # 加载语言配置
+            source_lang, target_lang = self.settings_manager.load_languages()
+            self.source_lang.set(source_lang)
+            self.target_lang.set(target_lang)
+
             logging.info("配置加载成功")
         except Exception as e:
             logging.error(f"加载配置失败: {str(e)}")
