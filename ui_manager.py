@@ -14,9 +14,8 @@ class UIManager:
         self.root = root
         self.settings_manager = settings_manager
         self._translate_lock = threading.Lock()
-        self.thread_pool = ThreadPoolExecutor(max_workers=3)  # 创建线程池
+        self.thread_pool = ThreadPoolExecutor(max_workers=3)
         
-        # 创建UI组件
         self.setup_ui()
         
     def setup_ui(self):
@@ -116,7 +115,7 @@ class UIManager:
         except Exception as e:
             logging.error(f"界面初始化失败: {str(e)}")
             Messagebox.showerror("错误", f"界面初始化失败: {str(e)}")
-    
+
     def on_theme_change(self, event=None):
         """主题切换事件"""
         theme = self.theme_var.get()
@@ -144,7 +143,7 @@ class UIManager:
             
             self.translator = BaiduTranslator(appid, appkey)
             logging.info("配置加载成功")
-    
+
     def translate(self):
         """执行翻译操作"""
         try:
@@ -162,15 +161,13 @@ class UIManager:
                 return
             
             self._set_controls_state('disabled')
-            
-            # 使用线程池提交翻译任务
             self.thread_pool.submit(self._translate_thread, source_text)
             
         except Exception as e:
             logging.error(f"翻译操作失败: {str(e)}")
             Messagebox.show_error("错误", f"翻译失败: {str(e)}")
             self._set_controls_state('normal')
-    
+
     def _translate_thread(self, source_text):
         """翻译线程"""
         try:
@@ -205,166 +202,155 @@ class UIManager:
             if not hasattr(self, 'translator') or not self.translator:
                 Messagebox.show_error("错误", "请先保存配置")
                 return
-                
-            import pyautogui
-            from PIL import Image, ImageTk, ImageDraw
-            import pytesseract
-            import tkinter as tk
-            
-            # 最小化窗口
-            self.root.iconify()
-            time.sleep(0.5)  # 等待窗口最小化
-            
-            # 获取全屏截图
-            screenshot = pyautogui.screenshot()
-            
-            # 创建选择窗口
-            selector = tk.Toplevel()
-            selector.attributes('-fullscreen', True)
-            selector.attributes('-alpha', 0.4)
-            selector.configure(background='black')
-            
-            # 创建画布
-            canvas = tk.Canvas(selector, highlightthickness=0)
-            canvas.pack(fill=tk.BOTH, expand=True)
-            
-            # 显示截图
-            photo = ImageTk.PhotoImage(screenshot)
-            canvas.create_image(0, 0, anchor=tk.NW, image=photo)
-            canvas.image = photo  # 保持引用
-            
-            # 选择框相关变量
-            selection_rect = None
-            start_x = None
-            start_y = None
-            size_label = None  # 移到函数开头声明
-            
-            def create_selection_rect(x1, y1, x2, y2):
-                """创建选择框，包括边框和半透明填充"""
-                # 外边框
-                canvas.create_rectangle(
-                    x1, y1, x2, y2,
-                    outline='red', width=2, tags='selection'
-                )
-                # 半透明填充
-                canvas.create_rectangle(
-                    x1, y1, x2, y2,
-                    fill='white', stipple='gray50', tags='selection'
-                )
-                
-            def update_selection_rect(x1, y1, x2, y2):
-                """更新选择框"""
-                nonlocal size_label  # 在这里声明nonlocal
-                canvas.delete('selection')
-                create_selection_rect(x1, y1, x2, y2)
-                
-                # 更新尺寸标签
-                if size_label:
-                    canvas.delete(size_label)
-                width = abs(x2 - x1)
-                height = abs(y2 - y1)
-                size_label = canvas.create_text(
-                    x2, y2 - 20,
-                    text=f"{width} × {height}",
-                    fill='white',
-                    font=('微软雅黑', 10),
-                    anchor=tk.S,
-                    tags='selection'
-                )
-                
-            def on_mouse_down(event):
-                nonlocal start_x, start_y
-                start_x = event.x
-                start_y = event.y
-                create_selection_rect(start_x, start_y, start_x, start_y)
-                
-            def on_mouse_drag(event):
-                if start_x is not None and start_y is not None:
-                    update_selection_rect(start_x, start_y, event.x, event.y)
-                    
-            def on_mouse_up(event):
-                if start_x is not None and start_y is not None:
-                    # 获取最终选择区域
-                    x = min(start_x, event.x)
-                    y = min(start_y, event.y)
-                    width = abs(event.x - start_x)
-                    height = abs(event.y - start_y)
-                    
-                    # 检查选择区域是否有效
-                    if width < 5 or height < 5:
-                        selector.destroy()
-                        self.root.deiconify()
-                        return
-                    
-                    # 裁剪选定区域
-                    selected_area = screenshot.crop((x, y, x + width, y + height))
-                    
-                    # 保存截图到临时文件
-                    temp_image = os.path.join('data', 'temp_screenshot.png')
-                    selected_area.save(temp_image)
-                    
-                    selector.destroy()
-                    
-                    # 使用OCR识别文本
-                    text = pytesseract.image_to_string(Image.open(temp_image), lang='chi_sim+eng')
-                    
-                    # 恢复主窗口
-                    self.root.deiconify()
-                    
-                    if text.strip():
-                        self.source_text.text.delete("1.0", "end")
-                        self.source_text.text.insert("1.0", text.strip())
-                        # 自动触发翻译
-                        self.translate()
-                    else:
-                        Messagebox.show_warning("提示", "未能识别到文本")
-                        
-                    # 删除临时文件
-                    try:
-                        os.remove(temp_image)
-                    except:
-                        pass
-            
-            # 绑定鼠标事件
-            canvas.bind('<Button-1>', on_mouse_down)
-            canvas.bind('<B1-Motion>', on_mouse_drag)
-            canvas.bind('<ButtonRelease-1>', on_mouse_up)
-            
-            # 添加提示文本
-            hint_frame = tk.Frame(selector, bg='black')
-            hint_frame.place(relx=0.5, rely=0.1, anchor='center')
-            
-            tk.Label(
-                hint_frame,
-                text="按住鼠标左键并拖动来选择要翻译的区域",
-                bg='black',
-                fg='white',
-                font=('微软雅黑', 12)
-            ).pack()
-            
-            tk.Label(
-                hint_frame,
-                text="按 ESC 键取消",
-                bg='black',
-                fg='gray',
-                font=('微软雅黑', 10)
-            ).pack()
-            
-            # 绑定ESC键取消选择
-            def on_escape(event):
-                selector.destroy()
-                self.root.deiconify()
-            selector.bind('<Escape>', on_escape)
-            
-            # 等待用户选择
-            selector.wait_window()
-                
+            self._minimize_and_capture()
         except Exception as e:
             logging.error(f"截图翻译失败: {str(e)}")
             Messagebox.showerror("错误", f"截图翻译失败: {str(e)}")
-            self.root.deiconify()  # 确保窗口恢复
+            self.root.deiconify()
 
+    def _minimize_and_capture(self):
+        """最小化窗口并执行截图"""
+        import pyautogui
+        self.root.iconify()
+        time.sleep(0.5)
+        screenshot = pyautogui.screenshot()
+        self._create_selection_window(screenshot)
 
+    def _create_selection_window(self, screenshot):
+        """创建选择窗口"""
+        import tkinter as tk
+        from PIL import Image, ImageTk
+        
+        selector = tk.Toplevel()
+        selector.attributes('-fullscreen', True)
+        selector.attributes('-alpha', 0.4)
+        selector.configure(background='black')
+        
+        canvas = tk.Canvas(selector, highlightthickness=0)
+        canvas.pack(fill=tk.BOTH, expand=True)
+        
+        photo = ImageTk.PhotoImage(screenshot)
+        canvas.create_image(0, 0, anchor=tk.NW, image=photo)
+        canvas.image = photo
+        
+        self._setup_selection_events(canvas, selector, screenshot)
+        self._add_selection_hints(selector)
+        selector.wait_window()
+
+    def _setup_selection_events(self, canvas, selector, screenshot):
+        """设置选择事件"""
+        start_x = start_y = None
+        size_label = None
+        
+        def on_mouse_down(event):
+            nonlocal start_x, start_y
+            start_x = event.x
+            start_y = event.y
+            self._create_selection_rect(canvas, start_x, start_y, start_x, start_y)
+            
+        def on_mouse_drag(event):
+            if start_x is not None and start_y is not None:
+                self._update_selection_rect(canvas, start_x, start_y, event.x, event.y, size_label)
+                
+        def on_mouse_up(event):
+            if start_x is not None and start_y is not None:
+                self._process_selection(canvas, selector, screenshot, start_x, start_y, event.x, event.y)
+        
+        canvas.bind('<Button-1>', on_mouse_down)
+        canvas.bind('<B1-Motion>', on_mouse_drag)
+        canvas.bind('<ButtonRelease-1>', on_mouse_up)
+        selector.bind('<Escape>', lambda e: self._cancel_selection(selector))
+
+    def _create_selection_rect(self, canvas, x1, y1, x2, y2):
+        """创建选择框"""
+        canvas.create_rectangle(x1, y1, x2, y2, outline='red', width=2, tags='selection')
+        canvas.create_rectangle(x1, y1, x2, y2, fill='white', stipple='gray50', tags='selection')
+
+    def _update_selection_rect(self, canvas, x1, y1, x2, y2, size_label):
+        """更新选择框"""
+        canvas.delete('selection')
+        self._create_selection_rect(canvas, x1, y1, x2, y2)
+        
+        if size_label:
+            canvas.delete(size_label)
+        width = abs(x2 - x1)
+        height = abs(y2 - y1)
+        size_label = canvas.create_text(
+            x2, y2 - 20,
+            text=f"{width} × {height}",
+            fill='white',
+            font=('微软雅黑', 10),
+            anchor=tk.S,
+            tags='selection'
+        )
+
+    def _process_selection(self, canvas, selector, screenshot, x1, y1, x2, y2):
+        """处理选择区域"""
+        x = min(x1, x2)
+        y = min(y1, y2)
+        width = abs(x2 - x1)
+        height = abs(y2 - y1)
+        
+        if width < 5 or height < 5:
+            selector.destroy()
+            self.root.deiconify()
+            return
+        
+        selected_area = screenshot.crop((x, y, x + width, y + height))
+        temp_image = os.path.join('data', 'temp_screenshot.png')
+        selected_area.save(temp_image)
+        
+        selector.destroy()
+        self._process_ocr_result(temp_image)
+
+    def _process_ocr_result(self, temp_image):
+        """处理OCR识别结果"""
+        import pytesseract
+        from PIL import Image
+        
+        self.root.deiconify()
+        
+        try:
+            text = pytesseract.image_to_string(Image.open(temp_image), lang='chi_sim+eng')
+            
+            if text.strip():
+                self.source_text.text.delete("1.0", "end")
+                self.source_text.text.insert("1.0", text.strip())
+                self.translate()
+            else:
+                Messagebox.show_warning("提示", "未能识别到文本")
+        finally:
+            try:
+                os.remove(temp_image)
+            except:
+                pass
+
+    def _add_selection_hints(self, selector):
+        """添加选择提示"""
+        import tkinter as tk
+        hint_frame = tk.Frame(selector, bg='black')
+        hint_frame.place(relx=0.5, rely=0.1, anchor='center')
+        
+        tk.Label(
+            hint_frame,
+            text="按住鼠标左键并拖动来选择要翻译的区域",
+            bg='black',
+            fg='white',
+            font=('微软雅黑', 12)
+        ).pack()
+        
+        tk.Label(
+            hint_frame,
+            text="按 ESC 键取消",
+            bg='black',
+            fg='gray',
+            font=('微软雅黑', 10)
+        ).pack()
+
+    def _cancel_selection(self, selector):
+        """取消选择"""
+        selector.destroy()
+        self.root.deiconify()
 
     def _update_result(self, result):
         """更新翻译结果"""
@@ -401,7 +387,6 @@ class UIManager:
                 self.source_lang.configure(state='disabled')
                 self.target_lang.configure(state='disabled')
                 self.source_text.text.configure(state='disabled')
-                
         except Exception as e:
             logging.error(f"设置控件状态失败: {str(e)}")
 
