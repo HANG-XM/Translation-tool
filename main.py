@@ -118,25 +118,22 @@ class TranslatorApp:
         """设置用户界面"""
         try:
             # 配置框架
-            config_frame = ttk.LabelFrame(self.root, text="配置信息", padding=10)
+            config_frame = ttk.Frame(self.root)
             config_frame.pack(padx=10, pady=5, fill=tk.X)
             
-            # APPID 输入框
-            ttk.Label(config_frame, text="APPID:").grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
-            self.appid_entry = ttk.Entry(config_frame, width=50)
-            self.appid_entry.grid(row=0, column=1, padx=5, pady=5, sticky=tk.W+tk.E)
+            # APPID 标签和输入框
+            ttk.Label(config_frame, text="APPID:").pack(side=tk.LEFT, padx=5)
+            self.appid_entry = ttk.Entry(config_frame, width=30)
+            self.appid_entry.pack(side=tk.LEFT, padx=5)
             
-            # APPKEY 输入框
-            ttk.Label(config_frame, text="APPKEY:").grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
-            self.appkey_entry = ttk.Entry(config_frame, width=50, show="*")
-            self.appkey_entry.grid(row=1, column=1, padx=5, pady=5, sticky=tk.W+tk.E)
+            # APPKEY 标签和输入框
+            ttk.Label(config_frame, text="APPKEY:").pack(side=tk.LEFT, padx=5)
+            self.appkey_entry = ttk.Entry(config_frame, width=30, show="*")
+            self.appkey_entry.pack(side=tk.LEFT, padx=5)
             
             # 保存配置按钮
             save_btn = ttk.Button(config_frame, text="保存配置", command=self.save_config)
-            save_btn.grid(row=1, column=2, padx=20, pady=5)
-            
-            # 让配置框架的列可以扩展
-            config_frame.columnconfigure(1, weight=1)
+            save_btn.pack(side=tk.LEFT, padx=20)
             
             # 源文本框架
             source_frame = ttk.LabelFrame(self.root, text="源文本", padding=5)
