@@ -66,7 +66,7 @@ def check_directories():
         if not os.path.exists(data_dir):
             os.makedirs(data_dir)
     except Exception as e:
-        Messagebox.show_error("错误", f"创建目录失败: {str(e)}")
+        Messagebox.showerror("错误", f"创建目录失败: {str(e)}")
         raise
 
 class TranslatorApp:

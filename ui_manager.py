@@ -45,72 +45,109 @@ class UIManager:
             logging.info("界面初始化完成")
         except Exception as e:
             logging.error(f"界面初始化失败: {str(e)}")
-            Messagebox.showerror("错误", f"界面初始化失败: {str(e)}")
+            Messagebox.show_error("错误", f"界面初始化失败: {str(e)}")
 
     def setup_translate_tab(self):
         """设置截图翻译标签页"""
         translate_frame = tb.Frame(self.notebook)
         self.notebook.add(translate_frame, text="📸 截图翻译")
 
-        # 创建顶部工具栏
+        # 用 grid 进行整体布局
+        translate_frame.rowconfigure(1, weight=1)  # 文本区可扩展
+        translate_frame.columnconfigure(0, weight=1)
+
+        # 顶部工具栏
         toolbar = tb.Frame(translate_frame, bootstyle=SECONDARY)
-        toolbar.pack(fill=X, padx=15, pady=(15, 5))
-        
-        # 语言选择框架
-        lang_frame = tb.LabelFrame(toolbar, text="语言设置", padding=10, bootstyle=INFO)
-        lang_frame.pack(side=LEFT, padx=5)
-        
+        toolbar.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 5))
+
+        # 语言选择区域
+        lang_frame = tb.LabelFrame(toolbar, text="语言设置", padding=6, bootstyle=INFO)
+        lang_frame.pack(side=TOP, padx=0, pady=0, fill=X)
+
         lang_grid = tb.Frame(lang_frame)
-        lang_grid.pack()
-        
-        tb.Label(lang_grid, text="源语言:").grid(row=0, column=0, padx=5)
-        self.source_lang = tb.Combobox(lang_grid, width=15, state="readonly", bootstyle=INFO)
+        lang_grid.pack(fill=X)
+        lang_grid.columnconfigure(1, weight=1)
+        lang_grid.columnconfigure(3, weight=1)
+
+        tb.Label(lang_grid, text="源语言:", font=('微软雅黑', 9)).grid(row=0, column=0, padx=(5,2), pady=2, sticky=E)
+        self.source_lang = tb.Combobox(lang_grid, width=12, state="readonly", bootstyle=INFO)
         self.source_lang['values'] = ('自动检测', '中文', '英语', '日语', '韩语', '法语', '德语', '俄语', '西班牙语')
         self.source_lang.set('自动检测')
-        self.source_lang.grid(row=0, column=1, padx=5)
-        
-        tb.Label(lang_grid, text="目标语言:").grid(row=0, column=2, padx=(15, 5))
-        self.target_lang = tb.Combobox(lang_grid, width=15, state="readonly", bootstyle=INFO)
+        self.source_lang.grid(row=0, column=1, padx=(0,10), pady=2, sticky=W+E)
+
+        tb.Label(lang_grid, text="目标语言:", font=('微软雅黑', 9)).grid(row=0, column=2, padx=(5,2), pady=2, sticky=E)
+        self.target_lang = tb.Combobox(lang_grid, width=12, state="readonly", bootstyle=INFO)
         self.target_lang['values'] = ('中文', '英语', '日语', '韩语', '法语', '德语', '俄语', '西班牙语')
         self.target_lang.set('英语')
-        self.target_lang.grid(row=0, column=3, padx=5)
-
-        # 按钮区域
-        button_frame = tb.Frame(toolbar)
-        button_frame.pack(side=RIGHT, padx=5)
-        
-        self.translate_btn = tb.Button(button_frame, text="🔤 翻译", command=self.translate, 
-                                    bootstyle=PRIMARY, width=12)
-        self.translate_btn.pack(side=LEFT, padx=5)
-
-        clear_btn = tb.Button(button_frame, text="🗑️ 清空", command=self.clear_text, 
-                            bootstyle=WARNING, width=12)
-        clear_btn.pack(side=LEFT, padx=5)
-
-        capture_btn = tb.Button(button_frame, text="📷 截图翻译", command=self.capture_translate, 
-                            bootstyle=INFO, width=12)
-        capture_btn.pack(side=LEFT, padx=5)
+        self.target_lang.grid(row=0, column=3, padx=(0,5), pady=2, sticky=W+E)
 
         # 文本区域
         text_container = tb.Frame(translate_frame)
-        text_container.pack(fill=BOTH, expand=True, padx=15, pady=(5, 15))
+        text_container.grid(row=1, column=0, sticky="nsew", padx=10, pady=5)
+        text_container.rowconfigure(0, weight=1)
+        text_container.columnconfigure(0, weight=1)
 
         paned_window = tb.PanedWindow(text_container, orient=VERTICAL)
         paned_window.pack(fill=BOTH, expand=True)
 
-        source_frame = tb.LabelFrame(paned_window, text="源文本", padding=10, bootstyle=PRIMARY)
+        source_frame = tb.LabelFrame(paned_window, text="源文本", padding=6, bootstyle=PRIMARY)
         paned_window.add(source_frame, weight=1)
 
-        self.source_text = ScrolledText(source_frame, wrap="word", height=8,
-                                    font=('微软雅黑', 11))
-        self.source_text.pack(padx=8, pady=8, fill=BOTH, expand=True)
+        self.source_text = ScrolledText(source_frame, wrap="word", height=5, font=('微软雅黑', 10))
+        self.source_text.pack(padx=4, pady=4, fill=BOTH, expand=True)
 
-        target_frame = tb.LabelFrame(paned_window, text="翻译结果", padding=10, bootstyle=PRIMARY)
+        target_frame = tb.LabelFrame(paned_window, text="翻译结果", padding=6, bootstyle=PRIMARY)
         paned_window.add(target_frame, weight=2)
 
-        self.target_text = ScrolledText(target_frame, wrap="word", height=12, 
-                                    font=('微软雅黑', 11))
-        self.target_text.pack(padx=8, pady=8, fill=BOTH, expand=True)
+        self.target_text = ScrolledText(target_frame, wrap="word", height=7, font=('微软雅黑', 10))
+        self.target_text.pack(padx=4, pady=4, fill=BOTH, expand=True)
+
+        # 底部工具栏
+        bottom_toolbar = tb.Frame(translate_frame, bootstyle=SECONDARY)
+        bottom_toolbar.grid(row=2, column=0, sticky="ew", padx=10, pady=(5, 10))
+
+        # 按钮区域
+        button_frame = tb.LabelFrame(bottom_toolbar, text="操作", padding=6, bootstyle=INFO)
+        button_frame.pack(side=TOP, padx=0, pady=0, fill=X)
+
+        button_grid = tb.Frame(button_frame)
+        button_grid.pack(fill=X)
+
+        self.translate_btn = tb.Button(button_grid, text="🔤 翻译", command=self.translate,
+                                    bootstyle=PRIMARY, width=10)
+        self.translate_btn.grid(row=0, column=0, padx=6, pady=2, sticky="ew")
+        self._create_tooltip(self.translate_btn, "翻译输入的文本 (Ctrl+Enter)")
+
+        self.clear_btn = tb.Button(button_grid, text="🗑️ 清空", command=self.clear_text,
+                            bootstyle=WARNING, width=10)
+        self.clear_btn.grid(row=0, column=1, padx=6, pady=2, sticky="ew")
+        self._create_tooltip(self.clear_btn, "清空所有文本 (Ctrl+D)")
+
+        self.capture_btn = tb.Button(button_grid, text="📷 截图翻译", command=self.capture_translate,
+                            bootstyle=INFO, width=10)
+        self.capture_btn.grid(row=0, column=2, padx=6, pady=2, sticky="ew")
+        self._create_tooltip(self.capture_btn, "截取屏幕上的文本进行翻译 (Ctrl+S)")
+
+        button_grid.columnconfigure(0, weight=1)
+        button_grid.columnconfigure(1, weight=1)
+        button_grid.columnconfigure(2, weight=1)
+    def _create_tooltip(self, widget, text):
+        """创建工具提示"""
+        def on_enter(event):
+            tooltip = tb.Toplevel()
+            tooltip.wm_overrideredirect(True)
+            tooltip.wm_geometry(f"+{event.x_root+10}+{event.y_root+10}")
+            label = tb.Label(tooltip, text=text, bootstyle=INFO)
+            label.pack()
+            widget.tooltip = tooltip
+
+        def on_leave(event):
+            if hasattr(widget, 'tooltip'):
+                widget.tooltip.destroy()
+                del widget.tooltip
+
+        widget.bind('<Enter>', on_enter)
+        widget.bind('<Leave>', on_leave)
 
     def setup_config_tab(self):
         """设置配置标签页"""
