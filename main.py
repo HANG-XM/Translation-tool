@@ -1,132 +1,49 @@
-import requests
-import random
-import hashlib
-import json
-from urllib.parse import quote
 import ttkbootstrap as tb
-from ttkbootstrap.constants import *
-from ttkbootstrap.scrolled import ScrolledText
 from ttkbootstrap.dialogs import Messagebox
-# import tkinter as tk
-# from tkinter import ttk, scrolledtext, messagebox
 import os
-import configparser
 import logging
+import configparser
 from datetime import datetime
-import threading
-import time
+from settings_manager import SettingsManager
+from ui_manager import UIManager
 
-class BaiduTranslator:
-    def __init__(self, appid, appkey):
-        self.appid = appid
-        self.appkey = appkey
-        self.api_url = 'https://fanyi-api.baidu.com/api/trans/vip/translate'
-        self.session = requests.Session()
-        self.timeout = 10
-        # 添加连接池配置
-        adapter = requests.adapters.HTTPAdapter(
-            pool_connections=10,
-            pool_maxsize=10,
-            max_retries=3
-        )
-        self.session.mount('http://', adapter)
-        self.session.mount('https://', adapter)
+def setup_logging():
+    """设置日志记录"""
+    log_file = os.path.join('log', f'translator_{datetime.now().strftime("%Y%m%d")}.log')
+    
+    # 创建日志格式器
+    formatter = logging.Formatter(
+        '%(asctime)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    
+    # 文件处理器
+    file_handler = logging.FileHandler(log_file, encoding='utf-8')
+    file_handler.setFormatter(formatter)
+    file_handler.setLevel(logging.INFO)
+    
+    # 控制台处理器
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    console_handler.setLevel(logging.WARNING)
+    
+    # 配置根日志记录器
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
 
-        self._cache = {}  # 添加缓存字典
-        self._cache_size = 100  # 缓存大小
-        self._cache_timeout = 3600  # 缓存过期时间，单位秒
-        
-    def translate(self, query, from_lang='auto', to_lang='zh'):
-        if not query.strip():
-            return "请输入要翻译的文本"
-
-        # 检查缓存
-        cache_key = f"{from_lang}:{to_lang}:{query}"
-        current_time = time.time()
-
-        # 检查缓存是否存在且未过期
-        if cache_key in self._cache:
-            cached_time, cached_result = self._cache[cache_key]
-            if time.time() - cached_time < self._cache_timeout:
-                logging.info(f"使用缓存结果: {query} -> {cached_result}")
-                return cached_result
-            else:
-                # 缓存过期，删除
-                del self._cache[cache_key]
-                logging.info(f"缓存已过期，删除缓存: {cache_key}")
-
-        salt = str(random.randint(32768, 65536))
-        sign_str = self.appid + query + salt + self.appkey
-        sign = hashlib.md5(sign_str.encode('utf-8')).hexdigest()
-        
-        params = {
-            'q': query,
-            'from': from_lang,
-            'to': to_lang,
-            'appid': self.appid,
-            'salt': salt,
-            'sign': sign
-        }
-        
-        # 记录请求URL
-        request_url = f"{self.api_url}?{'&'.join(f'{k}={v}' for k, v in params.items())}"
-        logging.info(f"发送翻译请求: {request_url}")
-
-        try:
-            response = self.session.get(self.api_url, params=params, timeout=self.timeout)
-            logging.info(f"收到响应状态码: {response.status_code}")
+def check_directories():
+    """检查并创建必要的目录"""
+    try:
+        if not os.path.exists('log'):
+            os.makedirs('log')
             
-            response.raise_for_status()
-            result = response.json()
-
-            # 记录完整的响应内容
-            logging.info(f"收到响应内容: {json.dumps(result, ensure_ascii=False, indent=2)}")
-            
-            if 'error_code' in result:
-                error_msg = result.get('error_msg', '未知错误')
-                logging.error(f"翻译API错误: {error_msg}")
-                return f"翻译错误: {error_msg}"
-            
-            trans_result = result.get('trans_result', [])
-            if not trans_result:
-                logging.warning("未获取到翻译结果")
-                return "未获取到翻译结果"
-            
-            # 处理多个翻译结果
-            translations = []
-            for item in trans_result:
-                if 'dst' in item:
-                    translations.append(item['dst'])
-                    logging.info(f"翻译结果项: {item}")
-            
-            if not translations:
-                logging.warning("未获取到有效的翻译结果")
-                return "未获取到有效的翻译结果"
-                
-            result_text = '\n'.join(translations)
-            logging.info(f"翻译完成: {query} -> {result_text}")
-            
-            # 缓存结果
-            if len(self._cache) >= self._cache_size:
-                self._cache.clear()
-                logging.info("缓存已满，清空缓存")
-            self._cache[cache_key] = (current_time, result_text)
-            logging.info(f"缓存翻译结果: {cache_key}")
-            
-            return result_text
-            
-        except requests.exceptions.RequestException as e:
-            error_msg = f"网络请求失败: {str(e)}"
-            logging.error(error_msg)
-            return error_msg
-        except json.JSONDecodeError as e:
-            error_msg = f"解析响应失败: {str(e)}"
-            logging.error(error_msg)
-            return error_msg
-        except Exception as e:
-            error_msg = f"翻译失败: {str(e)}"
-            logging.error(error_msg)
-            return error_msg
+        if not os.path.exists('data'):
+            os.makedirs('data')
+    except Exception as e:
+        Messagebox.showerror("错误", f"创建目录失败: {str(e)}")
+        raise
 
 class TranslatorApp:
     def __init__(self, root):
@@ -136,378 +53,22 @@ class TranslatorApp:
         self.root.geometry("1000x700")  # 增大窗口尺寸
         self.root.minsize(800, 600)     # 设置最小窗口尺寸
         
-        # 初始化变量
-        self.translator = None
+        # 初始化管理器
         self.config_file = os.path.join('data', 'config.ini')
-        self._config_lock = threading.Lock()
-        self._translate_lock = threading.Lock()
+        self.settings_manager = SettingsManager(self.root, self.config_file)
         
         # 设置日志
-        self.setup_logging()
+        setup_logging()
         
         # 检查并创建必要目录
-        self.check_directories()
+        check_directories()
         
         # 设置界面
-        self.setup_ui()
-        self.set_theme('light')  # 默认主题
+        self.ui_manager = UIManager(self.root, self.settings_manager)
+        self.settings_manager.set_theme('light')  # 默认主题
         
         # 尝试加载配置
-        self.load_config()
-        
-    def setup_logging(self):
-        """设置日志记录"""
-        log_file = os.path.join('log', f'translator_{datetime.now().strftime("%Y%m%d")}.log')
-        
-        # 创建日志格式器
-        formatter = logging.Formatter(
-            '%(asctime)s - %(levelname)s - %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
-        )
-        
-        # 文件处理器
-        file_handler = logging.FileHandler(log_file, encoding='utf-8')
-        file_handler.setFormatter(formatter)
-        file_handler.setLevel(logging.INFO)
-        
-        # 控制台处理器
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-        console_handler.setLevel(logging.WARNING)
-        
-        # 配置根日志记录器
-        logger = logging.getLogger()
-        logger.setLevel(logging.INFO)
-        logger.addHandler(file_handler)
-        logger.addHandler(console_handler)
-        
-    def check_directories(self):
-        """检查并创建必要的目录"""
-        try:
-            if not os.path.exists('log'):
-                os.makedirs('log')
-                logging.info("创建log目录")
-                
-            if not os.path.exists('data'):
-                os.makedirs('data')
-                logging.info("创建data目录")
-        except Exception as e:
-            logging.error(f"创建目录失败: {str(e)}")
-            Messagebox.showerror("错误", f"创建目录失败: {str(e)}")
-
-    def setup_ui(self):
-        """设置用户界面"""
-        try:
-            # 主容器
-            main_container = tb.Frame(self.root)
-            main_container.pack(padx=15, pady=15, fill=BOTH, expand=True)  # 增加内边距
-
-            # 配置框架
-            config_frame = tb.LabelFrame(main_container, text="配置", padding=15, bootstyle=INFO)
-            config_frame.pack(fill=X, pady=(0, 15))  # 增加底部间距
-            
-            # 配置内容网格布局
-            config_grid = tb.Frame(config_frame)
-            config_grid.pack(fill=X)
-            
-            # 主题选择
-            tb.Label(config_grid, text="主题:").grid(row=0, column=0, padx=8, sticky=W)  # 增加间距
-            self.theme_var = tb.StringVar()
-            self.theme_combo = tb.Combobox(config_grid, width=12, state="readonly",  # 增加宽度
-                                        textvariable=self.theme_var, bootstyle=PRIMARY)
-            self.theme_combo['values'] = ('白天', '黑夜')
-            self.theme_combo.set('白天')
-            self.theme_combo.grid(row=0, column=1, padx=8)
-            self.theme_combo.bind("<<ComboboxSelected>>", self.on_theme_change)
-            
-            # APPID 输入
-            tb.Label(config_grid, text="APPID:").grid(row=0, column=2, padx=(25, 8), sticky=W)  # 增加间距
-            self.appid_entry = tb.Entry(config_grid, width=35)  # 增加宽度
-            self.appid_entry.grid(row=0, column=3, padx=8)
-            
-            # APPKEY 输入
-            tb.Label(config_grid, text="APPKEY:").grid(row=0, column=4, padx=(25, 8), sticky=W)  # 增加间距
-            self.appkey_entry = tb.Entry(config_grid, width=35, show="*")  # 增加宽度
-            self.appkey_entry.grid(row=0, column=5, padx=8)
-            
-            # 保存配置按钮
-            save_btn = tb.Button(config_grid, text="保存配置", command=self.save_config, 
-                            bootstyle=SUCCESS, width=15)  # 增加按钮宽度
-            save_btn.grid(row=0, column=6, padx=(25, 0))
-
-            # 语言选择框架
-            lang_frame = tb.LabelFrame(main_container, text="语言设置", padding=15, bootstyle=INFO)
-            lang_frame.pack(fill=X, pady=(0, 15))  # 增加底部间距
-            
-            # 语言选择网格布局
-            lang_grid = tb.Frame(lang_frame)
-            lang_grid.pack(fill=X)
-            
-            # 源语言选择
-            tb.Label(lang_grid, text="源语言:").grid(row=0, column=0, padx=8, sticky=W)  # 增加间距
-            self.source_lang = tb.Combobox(lang_grid, width=18, state="readonly", bootstyle=INFO)  # 增加宽度
-            self.source_lang['values'] = ('自动检测', '中文', '英语', '日语', '韩语', '法语', '德语', '俄语', '西班牙语')
-            self.source_lang.set('自动检测')
-            self.source_lang.grid(row=0, column=1, padx=8)
-            
-            # 目标语言选择
-            tb.Label(lang_grid, text="目标语言:").grid(row=0, column=2, padx=(25, 8), sticky=W)  # 增加间距
-            self.target_lang = tb.Combobox(lang_grid, width=18, state="readonly", bootstyle=INFO)  # 增加宽度
-            self.target_lang['values'] = ('中文', '英语', '日语', '韩语', '法语', '德语', '俄语', '西班牙语')
-            self.target_lang.set('英语')
-            self.target_lang.grid(row=0, column=3, padx=8)
-
-            # 文本区域容器
-            text_container = tb.Frame(main_container)
-            text_container.pack(fill=BOTH, expand=True)
-
-            # 使用PanedWindow来分配空间
-            paned_window = tb.PanedWindow(text_container, orient=VERTICAL)
-            paned_window.pack(fill=BOTH, expand=True)
-
-            # 源文本框架
-            source_frame = tb.LabelFrame(paned_window, text="源文本", padding=10, bootstyle=PRIMARY)
-            paned_window.add(source_frame, weight=1)  # 设置权重为1
-
-            # 源文本编辑框
-            self.source_text = ScrolledText(source_frame, wrap="word", height=8,  # 减小高度到8行
-                                        font=('微软雅黑', 12))
-            self.source_text.pack(padx=10, pady=10, fill=BOTH, expand=True)
-
-            # 操作按钮框架
-            button_frame = tb.Frame(paned_window)
-            button_frame.pack(fill=X, pady=5)
-            paned_window.add(button_frame, weight=0)  # 按钮区域不伸缩
-
-            # 居中放置按钮
-            button_container = tb.Frame(button_frame)
-            button_container.pack()
-
-            # 翻译按钮
-            self.translate_btn = tb.Button(button_container, text="翻译", command=self.translate, 
-                                        bootstyle=PRIMARY, width=18)
-            self.translate_btn.pack(side=LEFT, padx=10)
-
-            # 清空按钮
-            clear_btn = tb.Button(button_container, text="清空", command=self.clear_text, 
-                                bootstyle=WARNING, width=18)
-            clear_btn.pack(side=LEFT, padx=10)
-
-            # 目标文本框架
-            target_frame = tb.LabelFrame(paned_window, text="翻译结果", padding=10, bootstyle=PRIMARY)
-            paned_window.add(target_frame, weight=2)  # 设置权重为2，比源文本框大
-
-            # 目标文本编辑框
-            self.target_text = ScrolledText(target_frame, wrap="word", height=12, 
-                                        font=('微软雅黑', 12))
-            self.target_text.pack(padx=10, pady=10, fill=BOTH, expand=True)
-            
-            # 设置网格列权重
-            config_grid.columnconfigure(3, weight=1)
-            config_grid.columnconfigure(5, weight=1)
-            
-            logging.info("界面初始化完成")
-        except Exception as e:
-            logging.error(f"界面初始化失败: {str(e)}")
-            Messagebox.showerror("错误", f"界面初始化失败: {str(e)}")
-
-    def on_theme_change(self, event=None):
-        """主题切换事件"""
-        theme = self.theme_var.get()
-        self.set_theme(theme)
-
-    def set_theme(self, theme):
-        """设置主题"""
-        if theme == '黑夜':
-            self.root.style.theme_use('darkly')
-        else:
-            self.root.style.theme_use('flatly')
-        self.root.update_idletasks()
-        
-    def save_config(self):
-        """保存配置到文件"""
-        try:
-            appid = self.appid_entry.get().strip()
-            appkey = self.appkey_entry.get().strip()
-            
-            if not appid or not appkey:
-                Messagebox.showerror("错误", "请输入APPID和APPKEY")
-                return
-                
-            with self._config_lock:  # 使用锁保护文件操作
-                config = configparser.ConfigParser()
-                config['BaiduAPI'] = {
-                    'appid': appid,
-                    'appkey': appkey
-                }
-                
-                os.makedirs('data', exist_ok=True)
-                
-                # 使用临时文件写入，避免写入失败导致原文件损坏
-                temp_file = self.config_file + '.tmp'
-                try:
-                    # 如果临时文件已存在，先删除
-                    if os.path.exists(temp_file):
-                        os.remove(temp_file)
-                    # 写入临时文件
-                    with open(temp_file, 'w', encoding='utf-8') as f:
-                        config.write(f)
-                    # 原子操作重命名文件
-                    os.replace(temp_file, self.config_file)
-                except Exception as e:
-                    # 如果操作失败，确保清理临时文件
-                    if os.path.exists(temp_file):
-                        try:
-                            os.remove(temp_file)
-                        except:
-                            pass
-                    raise e
-            
-            self.translator = BaiduTranslator(appid, appkey)
-            logging.info("配置保存成功")
-            Messagebox.showinfo("成功", "配置已保存")
-
-        except Exception as e:
-            logging.error(f"保存配置失败: {str(e)}")
-            Messagebox.showerror("错误", f"保存配置失败: {str(e)}")
-            
-    def load_config(self):
-        """从文件加载配置"""
-        try:
-            if not os.path.exists(self.config_file):
-                logging.info("配置文件不存在")
-                return
-                
-            config = configparser.ConfigParser()
-            config.read(self.config_file, encoding='utf-8')
-            
-            if 'BaiduAPI' in config:
-                appid = config['BaiduAPI'].get('appid', '')
-                appkey = config['BaiduAPI'].get('appkey', '')
-                
-                self.appid_entry.delete(0, END)
-                self.appid_entry.insert(0, appid)
-                
-                self.appkey_entry.delete(0, END)
-                self.appkey_entry.insert(0, appkey)
-                
-                if appid and appkey:
-                    self.translator = BaiduTranslator(appid, appkey)
-                    logging.info("配置加载成功")
-        except Exception as e:
-            logging.error(f"加载配置失败: {str(e)}")
-            Messagebox.showerror("错误", f"加载配置失败: {str(e)}")
-        
-    def translate(self):
-        """执行翻译操作"""
-        try:
-            if not self.translator:
-                Messagebox.showerror("错误", "请先保存配置")
-                return
-                
-            source_text = self.source_text.get("1.0", END).strip()
-            if not source_text:
-                Messagebox.showwarning("警告", "请输入要翻译的文本")
-                return
-            
-            if self._translate_lock.locked():
-                Messagebox.showwarning("提示", "正在翻译中，请稍候...")
-                return
-            
-            self._set_controls_state('disabled')
-            
-            threading.Thread(target=self._translate_thread, 
-                        args=(source_text,), 
-                        daemon=True).start()
-            
-        except Exception as e:
-            logging.error(f"翻译操作失败: {str(e)}")
-            Messagebox.showerror("错误", f"翻译失败: {str(e)}")
-            self._set_controls_state('normal')
-            
-
-    def _translate_thread(self, source_text):
-        """翻译线程"""
-        try:
-            lang_map = {
-                '自动检测': 'auto',
-                '中文': 'zh',
-                '英语': 'en',
-                '日语': 'ja',
-                '韩语': 'ko',
-                '法语': 'fr',
-                '德语': 'de',
-                '俄语': 'ru',
-                '西班牙语': 'es'
-            }
-            
-            from_lang = lang_map[self.source_lang.get()]
-            to_lang = lang_map[self.target_lang.get()]
-            
-            result = self.translator.translate(source_text, from_lang=from_lang, to_lang=to_lang)
-            
-            self.root.after(0, self._update_result, result)
-        except Exception as e:
-            error_msg = f"翻译失败: {str(e)}"
-            logging.error(error_msg)
-            self.root.after(0, self._show_error, error_msg)
-        finally:
-            self.root.after(0, self._set_controls_state, 'normal')
-
-    def _update_result(self, result):
-        """更新翻译结果"""
-        try:
-            # 修复：使用正确的方式设置 ScrolledText 的状态
-            self.target_text.text.configure(state='normal')
-            self.target_text.text.delete("1.0", END)
-            self.target_text.text.insert("1.0", result)
-            self.target_text.text.configure(state='disabled')
-            logging.info("翻译操作完成")
-        except Exception as e:
-            logging.error(f"更新翻译结果失败: {str(e)}")
-        finally:
-            self._set_controls_state('normal')
-
-    def _show_error(self, error_msg):
-        """显示错误信息"""
-        try:
-            Messagebox.showerror("错误", error_msg)
-        except Exception as e:
-            logging.error(f"显示错误信息失败: {str(e)}")
-        finally:
-            self._set_controls_state('normal')
-
-    def _set_controls_state(self, state):
-        """设置控件状态 - 修复版本"""
-        try:
-            # 修复：使用正确的方式设置控件状态
-            if state == 'normal':
-                self.translate_btn.configure(state='normal')
-                self.source_lang.configure(state='readonly')
-                self.target_lang.configure(state='readonly')
-                self.source_text.text.configure(state='normal')
-                # 目标文本保持只读状态
-            else:  # disabled
-                self.translate_btn.configure(state='disabled')
-                self.source_lang.configure(state='disabled')
-                self.target_lang.configure(state='disabled')
-                self.source_text.text.configure(state='disabled')
-                
-        except Exception as e:
-            logging.error(f"设置控件状态失败: {str(e)}")
-
-    def clear_text(self):
-        """清空文本框"""
-        try:
-            self.source_text.text.configure(state='normal')
-            self.target_text.text.configure(state='normal')
-            self.source_text.text.delete("1.0", END)
-            self.target_text.text.delete("1.0", END)
-            self.target_text.text.configure(state='disabled')
-            logging.info("清空文本框")
-        except Exception as e:
-            logging.error(f"清空文本框失败: {str(e)}")
-            Messagebox.showerror("错误", f"清空文本框失败: {str(e)}")
+        self.ui_manager.load_config()
 
 def main():
     try:
