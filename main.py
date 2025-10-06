@@ -3,8 +3,12 @@ import random
 import hashlib
 import json
 from urllib.parse import quote
-import tkinter as tk
-from tkinter import ttk, scrolledtext, messagebox
+import ttkbootstrap as tb
+from ttkbootstrap.constants import *
+from ttkbootstrap.scrolled import ScrolledText
+from ttkbootstrap.dialogs import Messagebox
+# import tkinter as tk
+# from tkinter import ttk, scrolledtext, messagebox
 import os
 import configparser
 import logging
@@ -144,6 +148,7 @@ class TranslatorApp:
         
         # 设置界面
         self.setup_ui()
+        self.set_theme('light')  # 默认主题
         
         # 尝试加载配置
         self.load_config()
@@ -186,82 +191,101 @@ class TranslatorApp:
                 logging.info("创建data目录")
         except Exception as e:
             logging.error(f"创建目录失败: {str(e)}")
-            messagebox.showerror("错误", f"创建目录失败: {str(e)}")
+            Messagebox.showerror("错误", f"创建目录失败: {str(e)}")
 
     def setup_ui(self):
         """设置用户界面"""
         try:
             # 配置框架
-            config_frame = ttk.Frame(self.root)
-            config_frame.pack(padx=10, pady=5, fill=tk.X)
+            config_frame = tb.Frame(self.root)
+            config_frame.pack(padx=10, pady=5, fill=X)
+            
+            # 主题选择
+            tb.Label(config_frame, text="主题:").pack(side=LEFT, padx=5)
+            self.theme_var = tb.StringVar()
+            self.theme_combo = tb.Combobox(config_frame, width=10, state="readonly", textvariable=self.theme_var, bootstyle=PRIMARY)
+            self.theme_combo['values'] = ('白天', '黑夜')
+            self.theme_combo.set('白天')
+            self.theme_combo.pack(side=LEFT, padx=5)
+            self.theme_combo.bind("<<ComboboxSelected>>", self.on_theme_change)
             
             # APPID 标签和输入框
-            ttk.Label(config_frame, text="APPID:").pack(side=tk.LEFT, padx=5)
-            self.appid_entry = ttk.Entry(config_frame, width=30)
-            self.appid_entry.pack(side=tk.LEFT, padx=5)
+            tb.Label(config_frame, text="APPID:").pack(side=LEFT, padx=5)
+            self.appid_entry = tb.Entry(config_frame, width=30)
+            self.appid_entry.pack(side=LEFT, padx=5)
             
             # APPKEY 标签和输入框
-            ttk.Label(config_frame, text="APPKEY:").pack(side=tk.LEFT, padx=5)
-            self.appkey_entry = ttk.Entry(config_frame, width=30)
-            self.appkey_entry.pack(side=tk.LEFT, padx=5)
-            # 设置密码显示模式
-            self.appkey_entry.configure(show="*")
+            tb.Label(config_frame, text="APPKEY:").pack(side=LEFT, padx=5)
+            self.appkey_entry = tb.Entry(config_frame, width=30, show="*")
+            self.appkey_entry.pack(side=LEFT, padx=5)
             
             # 保存配置按钮
-            save_btn = ttk.Button(config_frame, text="保存配置", command=self.save_config)
-            save_btn.pack(side=tk.LEFT, padx=20)
+            save_btn = tb.Button(config_frame, text="保存配置", command=self.save_config, bootstyle=SUCCESS)
+            save_btn.pack(side=LEFT, padx=20)
             
             # 语言选择框架
-            lang_frame = ttk.Frame(self.root)
-            lang_frame.pack(padx=10, pady=5, fill=tk.X)
+            lang_frame = tb.Frame(self.root)
+            lang_frame.pack(padx=10, pady=5, fill=X)
             
             # 源语言选择
-            ttk.Label(lang_frame, text="源语言:").pack(side=tk.LEFT, padx=5)
-            self.source_lang = ttk.Combobox(lang_frame, width=15, state="readonly")
+            tb.Label(lang_frame, text="源语言:").pack(side=LEFT, padx=5)
+            self.source_lang = tb.Combobox(lang_frame, width=15, state="readonly", bootstyle=INFO)
             self.source_lang['values'] = ('自动检测', '中文', '英语', '日语', '韩语', '法语', '德语', '俄语', '西班牙语')
             self.source_lang.set('自动检测')
-            self.source_lang.pack(side=tk.LEFT, padx=5)
+            self.source_lang.pack(side=LEFT, padx=5)
             
             # 目标语言选择
-            ttk.Label(lang_frame, text="目标语言:").pack(side=tk.LEFT, padx=5)
-            self.target_lang = ttk.Combobox(lang_frame, width=15, state="readonly")
+            tb.Label(lang_frame, text="目标语言:").pack(side=LEFT, padx=5)
+            self.target_lang = tb.Combobox(lang_frame, width=15, state="readonly", bootstyle=INFO)
             self.target_lang['values'] = ('中文', '英语', '日语', '韩语', '法语', '德语', '俄语', '西班牙语')
             self.target_lang.set('英语')
-            self.target_lang.pack(side=tk.LEFT, padx=5)
+            self.target_lang.pack(side=LEFT, padx=5)
             
             # 源文本框架
-            source_frame = ttk.LabelFrame(self.root, text="源文本", padding=5)
-            source_frame.pack(padx=10, pady=5, fill=tk.BOTH, expand=True)
+            source_frame = tb.Labelframe(self.root, text="源文本", padding=5, bootstyle=PRIMARY)
+            source_frame.pack(padx=10, pady=5, fill=BOTH, expand=True)
             
             # 源文本编辑框
-            self.source_text = scrolledtext.ScrolledText(source_frame, wrap=tk.WORD, width=80, height=10)
-            self.source_text.pack(padx=5, pady=5, fill=tk.BOTH, expand=True)
+            self.source_text = ScrolledText(source_frame, wrap="word", width=80, height=10, font=('微软雅黑', 11))
+            self.source_text.pack(padx=5, pady=5, fill=BOTH, expand=True)
             
             # 操作按钮框架
-            button_frame = ttk.Frame(self.root)
-            button_frame.pack(padx=10, pady=5, fill=tk.X)
+            button_frame = tb.Frame(self.root)
+            button_frame.pack(padx=10, pady=5, fill=X)
             
             # 翻译按钮
-            self.translate_btn = ttk.Button(button_frame, text="翻译", command=self.translate)
-            self.translate_btn.pack(side=tk.LEFT, padx=5)
+            self.translate_btn = tb.Button(button_frame, text="翻译", command=self.translate, bootstyle=PRIMARY)
+            self.translate_btn.pack(side=LEFT, padx=5)
             
             # 清空按钮
-            clear_btn = ttk.Button(button_frame, text="清空", command=self.clear_text)
-            clear_btn.pack(side=tk.LEFT, padx=5)
+            clear_btn = tb.Button(button_frame, text="清空", command=self.clear_text, bootstyle=WARNING)
+            clear_btn.pack(side=LEFT, padx=5)
             
             # 目标文本框架
-            target_frame = ttk.LabelFrame(self.root, text="翻译结果", padding=5)
-            target_frame.pack(padx=10, pady=5, fill=tk.BOTH, expand=True)
+            target_frame = tb.Labelframe(self.root, text="翻译结果", padding=5, bootstyle=PRIMARY)
+            target_frame.pack(padx=10, pady=5, fill=BOTH, expand=True)
             
             # 目标文本编辑框
-            self.target_text = scrolledtext.ScrolledText(target_frame, wrap=tk.WORD, width=80, height=10)
-            self.target_text.pack(padx=5, pady=5, fill=tk.BOTH, expand=True)
+            self.target_text = ScrolledText(target_frame, wrap="word", width=80, height=10, font=('微软雅黑', 11))
+            self.target_text.pack(padx=5, pady=5, fill=BOTH, expand=True)
             
             logging.info("界面初始化完成")
         except Exception as e:
             logging.error(f"界面初始化失败: {str(e)}")
-            messagebox.showerror("错误", f"界面初始化失败: {str(e)}")
-        
+            Messagebox.showerror("错误", f"界面初始化失败: {str(e)}")
+
+    def on_theme_change(self, event=None):
+        """主题切换事件"""
+        theme = self.theme_var.get()
+        self.set_theme(theme)
+
+    def set_theme(self, theme):
+        """设置主题"""
+        if theme == '黑夜':
+            self.root.style.theme_use('darkly')
+        else:
+            self.root.style.theme_use('flatly')
+        self.root.update_idletasks()
     def save_config(self):
         """保存配置到文件"""
         try:
@@ -269,7 +293,7 @@ class TranslatorApp:
             appkey = self.appkey_entry.get().strip()
             
             if not appid or not appkey:
-                messagebox.showerror("错误", "请输入APPID和APPKEY")
+                Messagebox.showerror("错误", "请输入APPID和APPKEY")
                 return
                 
             with self._config_lock:  # 使用锁保护文件操作
@@ -303,11 +327,11 @@ class TranslatorApp:
             
             self.translator = BaiduTranslator(appid, appkey)
             logging.info("配置保存成功")
-            messagebox.showinfo("成功", "配置已保存")
+            Messagebox.showinfo("成功", "配置已保存")
 
         except Exception as e:
             logging.error(f"保存配置失败: {str(e)}")
-            messagebox.showerror("错误", f"保存配置失败: {str(e)}")
+            Messagebox.showerror("错误", f"保存配置失败: {str(e)}")
             
     def load_config(self):
         """从文件加载配置"""
@@ -323,10 +347,10 @@ class TranslatorApp:
                 appid = config['BaiduAPI'].get('appid', '')
                 appkey = config['BaiduAPI'].get('appkey', '')
                 
-                self.appid_entry.delete(0, tk.END)
+                self.appid_entry.delete(0, END)
                 self.appid_entry.insert(0, appid)
                 
-                self.appkey_entry.delete(0, tk.END)
+                self.appkey_entry.delete(0, END)
                 self.appkey_entry.insert(0, appkey)
                 
                 if appid and appkey:
@@ -334,43 +358,39 @@ class TranslatorApp:
                     logging.info("配置加载成功")
         except Exception as e:
             logging.error(f"加载配置失败: {str(e)}")
-            messagebox.showerror("错误", f"加载配置失败: {str(e)}")
+            Messagebox.showerror("错误", f"加载配置失败: {str(e)}")
         
     def translate(self):
         """执行翻译操作"""
         try:
             if not self.translator:
-                messagebox.showerror("错误", "请先保存配置")
+                Messagebox.showerror("错误", "请先保存配置")
                 return
                 
-            source_text = self.source_text.get("1.0", tk.END).strip()
+            source_text = self.source_text.get("1.0", END).strip()
             if not source_text:
-                messagebox.showwarning("警告", "请输入要翻译的文本")
+                Messagebox.showwarning("警告", "请输入要翻译的文本")
                 return
             
-            # 检查是否已有翻译在进行
             if self._translate_lock.locked():
-                messagebox.showwarning("提示", "正在翻译中，请稍候...")
+                Messagebox.showwarning("提示", "正在翻译中，请稍候...")
                 return
             
-            # 禁用所有相关控件
             self._set_controls_state('disabled')
             
-            # 使用线程执行翻译
             threading.Thread(target=self._translate_thread, 
                         args=(source_text,), 
                         daemon=True).start()
             
         except Exception as e:
             logging.error(f"翻译操作失败: {str(e)}")
-            messagebox.showerror("错误", f"翻译失败: {str(e)}")
+            Messagebox.showerror("错误", f"翻译失败: {str(e)}")
             self._set_controls_state('normal')
             
 
     def _translate_thread(self, source_text):
         """翻译线程"""
         try:
-            # 获取语言代码
             lang_map = {
                 '自动检测': 'auto',
                 '中文': 'zh',
@@ -388,21 +408,19 @@ class TranslatorApp:
             
             result = self.translator.translate(source_text, from_lang=from_lang, to_lang=to_lang)
             
-            # 在主线程中更新界面
             self.root.after(0, self._update_result, result)
         except Exception as e:
             error_msg = f"翻译失败: {str(e)}"
             logging.error(error_msg)
             self.root.after(0, self._show_error, error_msg)
         finally:
-            # 确保控件状态恢复正常
             self.root.after(0, self._set_controls_state, 'normal')
 
     def _update_result(self, result):
         """更新翻译结果"""
         try:
-            self.target_text.configure(state='normal')  # 确保可写入
-            self.target_text.delete("1.0", tk.END)
+            self.target_text.configure(state='normal')
+            self.target_text.delete("1.0", END)
             self.target_text.insert("1.0", result)
             logging.info("翻译操作完成")
         except Exception as e:
@@ -413,48 +431,41 @@ class TranslatorApp:
     def _show_error(self, error_msg):
         """显示错误信息"""
         try:
-            messagebox.showerror("错误", error_msg)
+            Messagebox.showerror("错误", error_msg)
         except Exception as e:
             logging.error(f"显示错误信息失败: {str(e)}")
         finally:
             self._set_controls_state('normal')
 
     def _set_controls_state(self, state):
-        """设置控件状态"""
         try:
-            # Button 状态转换
             self.translate_btn.configure(state=state)
-            
-            # Combobox 状态转换
             combo_state = 'readonly' if state == 'normal' else 'disabled'
             self.source_lang.configure(state=combo_state)
             self.target_lang.configure(state=combo_state)
-
-            # 文本框始终保持可编辑
             self.source_text.configure(state='normal')
             self.target_text.configure(state='normal')
-            
         except Exception as e:
             logging.error(f"设置控件状态失败: {str(e)}")
 
     def clear_text(self):
         """清空文本框"""
         try:
-            self.source_text.delete("1.0", tk.END)
-            self.target_text.delete("1.0", tk.END)
+            self.source_text.delete("1.0", END)
+            self.target_text.delete("1.0", END)
             logging.info("清空文本框")
         except Exception as e:
             logging.error(f"清空文本框失败: {str(e)}")
-            messagebox.showerror("错误", f"清空文本框失败: {str(e)}")
+            Messagebox.showerror("错误", f"清空文本框失败: {str(e)}")
 
 def main():
     try:
-        root = tk.Tk()
+        root = tb.Window(themename="flatly")
         app = TranslatorApp(root)
         root.mainloop()
     except Exception as e:
         logging.critical(f"程序启动失败: {str(e)}")
-        messagebox.showerror("错误", f"程序启动失败: {str(e)}")
+        Messagebox.showerror("错误", f"程序启动失败: {str(e)}")
 
 if __name__ == '__main__':
     main()
