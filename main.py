@@ -286,6 +286,7 @@ class TranslatorApp:
         else:
             self.root.style.theme_use('flatly')
         self.root.update_idletasks()
+        
     def save_config(self):
         """保存配置到文件"""
         try:
@@ -419,9 +420,11 @@ class TranslatorApp:
     def _update_result(self, result):
         """更新翻译结果"""
         try:
-            self.target_text.configure(state='normal')
-            self.target_text.delete("1.0", END)
-            self.target_text.insert("1.0", result)
+            # 修复：使用正确的方式设置 ScrolledText 的状态
+            self.target_text.text.configure(state='normal')
+            self.target_text.text.delete("1.0", END)
+            self.target_text.text.insert("1.0", result)
+            self.target_text.text.configure(state='disabled')
             logging.info("翻译操作完成")
         except Exception as e:
             logging.error(f"更新翻译结果失败: {str(e)}")
@@ -438,21 +441,32 @@ class TranslatorApp:
             self._set_controls_state('normal')
 
     def _set_controls_state(self, state):
+        """设置控件状态 - 修复版本"""
         try:
-            self.translate_btn.configure(state=state)
-            combo_state = 'readonly' if state == 'normal' else 'disabled'
-            self.source_lang.configure(state=combo_state)
-            self.target_lang.configure(state=combo_state)
-            self.source_text.configure(state='normal')
-            self.target_text.configure(state='normal')
+            # 修复：使用正确的方式设置控件状态
+            if state == 'normal':
+                self.translate_btn.configure(state='normal')
+                self.source_lang.configure(state='readonly')
+                self.target_lang.configure(state='readonly')
+                self.source_text.text.configure(state='normal')
+                # 目标文本保持只读状态
+            else:  # disabled
+                self.translate_btn.configure(state='disabled')
+                self.source_lang.configure(state='disabled')
+                self.target_lang.configure(state='disabled')
+                self.source_text.text.configure(state='disabled')
+                
         except Exception as e:
             logging.error(f"设置控件状态失败: {str(e)}")
 
     def clear_text(self):
         """清空文本框"""
         try:
-            self.source_text.delete("1.0", END)
-            self.target_text.delete("1.0", END)
+            self.source_text.text.configure(state='normal')
+            self.target_text.text.configure(state='normal')
+            self.source_text.text.delete("1.0", END)
+            self.target_text.text.delete("1.0", END)
+            self.target_text.text.configure(state='disabled')
             logging.info("清空文本框")
         except Exception as e:
             logging.error(f"清空文本框失败: {str(e)}")
