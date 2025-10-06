@@ -246,6 +246,8 @@ class UIManager:
 
     def setup_about_tab(self):
         """设置关于标签页"""
+        from version_config import VERSION_INFO
+        
         about_frame = tb.Frame(self.notebook)
         self.notebook.add(about_frame, text="ℹ️ 关于")
 
@@ -260,7 +262,7 @@ class UIManager:
                             font=('微软雅黑', 24, 'bold'))
         title_label.pack()
         
-        version_label = tb.Label(logo_frame, text="Version 1.0.0", 
+        version_label = tb.Label(logo_frame, text=f"Version {VERSION_INFO['version']}", 
                             font=('微软雅黑', 12))
         version_label.pack()
 
@@ -273,30 +275,23 @@ class UIManager:
         author_frame.pack(fill=X, pady=5)
         
         tb.Label(author_frame, text="作者：", font=('微软雅黑', 10)).pack(side=LEFT)
-        tb.Label(author_frame, text="HANG-XM", font=('微软雅黑', 10, 'bold')).pack(side=LEFT)
+        tb.Label(author_frame, text=VERSION_INFO['author'], font=('微软雅黑', 10, 'bold')).pack(side=LEFT)
 
         # GitHub链接
         github_frame = tb.Frame(info_card)
         github_frame.pack(fill=X, pady=5)
         
         tb.Label(github_frame, text="项目地址：", font=('微软雅黑', 10)).pack(side=LEFT)
-        github_link = tb.Label(github_frame, text="https://github.com/HANG-XM/Translation-tool", 
+        github_link = tb.Label(github_frame, text=VERSION_INFO['github'], 
                             font=('微软雅黑', 10, 'bold'), foreground='blue', cursor='hand2')
         github_link.pack(side=LEFT)
-        github_link.bind("<Button-1>", lambda e: self._open_link("https://github.com/HANG-XM/Translation-tool"))
+        github_link.bind("<Button-1>", lambda e: self._open_link(VERSION_INFO['github']))
 
         # 功能说明
         feature_frame = tb.LabelFrame(about_container, text="主要功能", padding=20, bootstyle=INFO)
         feature_frame.pack(fill=X, pady=10)
 
-        features = [
-            "📸 支持截图翻译功能",
-            "🔤 支持多语言互译",
-            "🎨 支持主题切换",
-            "💾 支持配置保存"
-        ]
-        
-        for feature in features:
+        for feature in VERSION_INFO['features']:
             tb.Label(feature_frame, text=feature, font=('微软雅黑', 10)).pack(anchor=W, pady=2)
 
     def _open_link(self, url):
