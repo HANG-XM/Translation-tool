@@ -7,10 +7,34 @@ from datetime import datetime
 import time
 from settings_manager import SettingsManager
 from ui_manager import UIManager
+import sys
+
+def get_base_path():
+    """获取程序运行的基础路径"""
+    if getattr(sys, 'frozen', False):
+        # 如果是打包后的exe
+        return os.path.dirname(sys.executable)
+    else:
+        # 如果是源码运行
+        return os.path.dirname(os.path.abspath(__file__))
+
+def get_resource_path(relative_path):
+    """获取资源文件的绝对路径"""
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = get_base_path()
+    return os.path.join(base_path, relative_path)
 
 def setup_logging():
     """设置日志记录"""
-    log_file = os.path.join('log', f'translator_{datetime.now().strftime("%Y%m%d")}.log')
+    base_path = get_base_path()
+    log_dir = os.path.join(base_path, 'log')
+    
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+        
+    log_file = os.path.join(log_dir, f'translator_{datetime.now().strftime("%Y%m%d")}.log')
     
     formatter = logging.Formatter(
         '%(asctime)s - %(levelname)s - %(message)s',
@@ -33,10 +57,14 @@ def setup_logging():
 def check_directories():
     """检查并创建必要的目录"""
     try:
-        if not os.path.exists('log'):
-            os.makedirs('log')
-        if not os.path.exists('data'):
-            os.makedirs('data')
+        base_path = get_base_path()
+        log_dir = os.path.join(base_path, 'log')
+        data_dir = os.path.join(base_path, 'data')
+        
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        if not os.path.exists(data_dir):
+            os.makedirs(data_dir)
     except Exception as e:
         Messagebox.showerror("错误", f"创建目录失败: {str(e)}")
         raise
@@ -48,7 +76,8 @@ class TranslatorApp:
         self.root.geometry("1000x700")
         self.root.minsize(800, 600)
         
-        self.config_file = os.path.join('data', 'config.ini')
+        base_path = get_base_path()
+        self.config_file = os.path.join(base_path, 'data', 'config.ini')
         self.settings_manager = SettingsManager(self.root, self.config_file)
         
         setup_logging()

@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 import os
 import time
 from translator import BaiduTranslator
+import tkinter as tk
 
 class UIManager:
     def __init__(self, root, settings_manager):
