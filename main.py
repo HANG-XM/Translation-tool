@@ -129,11 +129,29 @@ class TranslatorApp:
             # APPKEY 标签和输入框
             ttk.Label(config_frame, text="APPKEY:").pack(side=tk.LEFT, padx=5)
             self.appkey_entry = ttk.Entry(config_frame, width=30, show="*")
-            self.appkey_entry.pack(side=tk.LEFT, padx=5)
+            self.appid_entry.pack(side=tk.LEFT, padx=5)
             
             # 保存配置按钮
             save_btn = ttk.Button(config_frame, text="保存配置", command=self.save_config)
             save_btn.pack(side=tk.LEFT, padx=20)
+            
+            # 语言选择框架
+            lang_frame = ttk.Frame(self.root)
+            lang_frame.pack(padx=10, pady=5, fill=tk.X)
+            
+            # 源语言选择
+            ttk.Label(lang_frame, text="源语言:").pack(side=tk.LEFT, padx=5)
+            self.source_lang = ttk.Combobox(lang_frame, width=15, state="readonly")
+            self.source_lang['values'] = ('自动检测', '中文', '英语', '日语', '韩语', '法语', '德语', '俄语', '西班牙语')
+            self.source_lang.set('自动检测')
+            self.source_lang.pack(side=tk.LEFT, padx=5)
+            
+            # 目标语言选择
+            ttk.Label(lang_frame, text="目标语言:").pack(side=tk.LEFT, padx=5)
+            self.target_lang = ttk.Combobox(lang_frame, width=15, state="readonly")
+            self.target_lang['values'] = ('中文', '英语', '日语', '韩语', '法语', '德语', '俄语', '西班牙语')
+            self.target_lang.set('英语')
+            self.target_lang.pack(side=tk.LEFT, padx=5)
             
             # 源文本框架
             source_frame = ttk.LabelFrame(self.root, text="源文本", padding=5)
@@ -235,10 +253,26 @@ class TranslatorApp:
                 messagebox.showwarning("警告", "请输入要翻译的文本")
                 return
             
+            # 获取语言代码
+            lang_map = {
+                '自动检测': 'auto',
+                '中文': 'zh',
+                '英语': 'en',
+                '日语': 'ja',
+                '韩语': 'ko',
+                '法语': 'fr',
+                '德语': 'de',
+                '俄语': 'ru',
+                '西班牙语': 'es'
+            }
+            
+            from_lang = lang_map[self.source_lang.get()]
+            to_lang = lang_map[self.target_lang.get()]
+            
             self.translate_btn.state(['disabled'])
             self.root.update()
             
-            result = self.translator.translate(source_text)
+            result = self.translator.translate(source_text, from_lang=from_lang, to_lang=to_lang)
             self.target_text.delete("1.0", tk.END)
             self.target_text.insert("1.0", result)
             
