@@ -33,7 +33,7 @@ class UIManager:
             
             tb.Label(config_grid, text="主题:").grid(row=0, column=0, padx=8, sticky=W)
             self.theme_var = tb.StringVar()
-            self.theme_combo = tb.Combobox(config_grid, width=12, state="readonly",
+            self.theme_combo = tb.Combobox(config_grid, width=4, state="readonly",
                                         textvariable=self.theme_var, bootstyle=PRIMARY)
             self.theme_combo['values'] = ('白天', '黑夜')
             self.theme_combo.set('白天')
@@ -41,15 +41,15 @@ class UIManager:
             self.theme_combo.bind("<<ComboboxSelected>>", self.on_theme_change)
             
             tb.Label(config_grid, text="APPID:").grid(row=0, column=2, padx=(25, 8), sticky=W)
-            self.appid_entry = tb.Entry(config_grid, width=35)
+            self.appid_entry = tb.Entry(config_grid, width=45)
             self.appid_entry.grid(row=0, column=3, padx=8)
             
             tb.Label(config_grid, text="APPKEY:").grid(row=0, column=4, padx=(25, 8), sticky=W)
-            self.appkey_entry = tb.Entry(config_grid, width=35, show="*")
+            self.appkey_entry = tb.Entry(config_grid, width=45, show="*")
             self.appkey_entry.grid(row=0, column=5, padx=8)
             
             save_btn = tb.Button(config_grid, text="保存配置", command=self.save_config, 
-                            bootstyle=SUCCESS, width=15)
+                            bootstyle=SUCCESS, width=10)
             save_btn.grid(row=0, column=6, padx=(25, 0))
 
             lang_frame = tb.LabelFrame(main_container, text="语言设置", padding=15, bootstyle=INFO)
