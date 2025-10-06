@@ -5,6 +5,7 @@ import logging
 import time
 from ttkbootstrap.dialogs import Messagebox
 import ttkbootstrap as tb
+
 class ConfigManager:
     """配置文件管理"""
     def __init__(self, config_file):
@@ -60,6 +61,42 @@ class ConfigManager:
             return appid, appkey
         
         return None, None
+    
+    def save_shortcuts(self, shortcuts):
+        """保存快捷键配置"""
+        try:
+            config = configparser.ConfigParser()
+            config['Shortcuts'] = shortcuts
+            
+            temp_file = self.config_file + '.tmp'
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                config.write(f)
+            os.replace(temp_file, self.config_file)
+            return True
+        except Exception as e:
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
+            raise e
+
+    def load_shortcuts(self):
+        """加载快捷键配置"""
+        if not os.path.exists(self.config_file):
+            return {
+                'translate': '<Control-Return>',
+                'clear': '<Control-d>',
+                'capture': '<Control-s>'
+            }
+        
+        config = configparser.ConfigParser()
+        config.read(self.config_file, encoding='utf-8')
+        
+        if 'Shortcuts' in config:
+            return dict(config['Shortcuts'])
+        return {
+            'translate': '<Control-Return>',
+            'clear': '<Control-d>',
+            'capture': '<Control-s>'
+        }
     
     def _update_cache(self, appid, appkey):
         """更新配置缓存"""
@@ -123,6 +160,63 @@ class SettingsManager:
             Messagebox.show_error("错误", f"加载配置失败: {str(e)}")
             return None, None
     
+    def save_shortcuts(self, shortcuts):
+        """保存快捷键配置"""
+        try:
+            return self.config_manager.save_shortcuts(shortcuts)
+        except Exception as e:
+            Messagebox.show_error("错误", f"保存快捷键失败: {str(e)}")
+            return False
+    
+    def load_shortcuts(self):
+        """加载快捷键配置"""
+        try:
+            return self.config_manager.load_shortcuts()
+        except Exception as e:
+            Messagebox.show_error("错误", f"加载快捷键失败: {str(e)}")
+            return {
+                'translate': '<Control-Return>',
+                'clear': '<Control-d>',
+                'capture': '<Control-s>'
+            }
+    
     def set_theme(self, theme):
         """设置主题"""
         self.theme_manager.set_theme(theme)
+
+    def save_all_config(self, appid, appkey, shortcuts, theme):
+        """保存所有配置"""
+        try:
+            config = configparser.ConfigParser()
+            config['BaiduAPI'] = {'appid': appid, 'appkey': appkey}
+            config['Shortcuts'] = shortcuts
+            config['Theme'] = {'theme': theme}
+            
+            temp_file = self.config_manager.config_file + '.tmp'
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                config.write(f)
+            os.replace(temp_file, self.config_manager.config_file)
+            
+            # 应用主题设置
+            self.set_theme(theme)
+            return True
+        except Exception as e:
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
+            raise e
+    
+    def load_theme(self):
+        """加载主题配置"""
+        try:
+            if not os.path.exists(self.config_manager.config_file):
+                return '白天'
+            
+            config = configparser.ConfigParser()
+            config.read(self.config_manager.config_file, encoding='utf-8')
+            
+            if 'Theme' in config:
+                return config['Theme'].get('theme', '白天')
+            return '白天'
+        except Exception as e:
+            logging.error(f"加载主题配置失败: {str(e)}")
+            return '白天'

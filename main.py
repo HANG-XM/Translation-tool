@@ -86,6 +86,7 @@ class TranslatorApp:
         self.ui_manager = UIManager(self.root, self.settings_manager)
         self.settings_manager.set_theme('flatly')  # 修改为与ttkbootstrap主题名称一致
         self.ui_manager.load_config()
+        self.ui_manager.bind_shortcuts()
 
 def main():
     try:

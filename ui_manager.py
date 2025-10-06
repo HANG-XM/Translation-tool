@@ -154,47 +154,95 @@ class UIManager:
         config_frame = tb.Frame(self.notebook)
         self.notebook.add(config_frame, text="⚙️ 配置")
 
-        config_container = tb.Frame(config_frame)
-        config_container.pack(padx=20, pady=20, fill=BOTH, expand=True)
+        # 创建主容器
+        main_container = tb.Frame(config_frame)
+        main_container.pack(padx=20, pady=20, fill=BOTH, expand=True)
+        main_container.columnconfigure(0, weight=1)
 
-        # 配置卡片
-        config_card = tb.LabelFrame(config_container, text="API配置", padding=20, bootstyle=INFO)
-        config_card.pack(fill=X, pady=10)
+        # 创建左右分栏
+        left_panel = tb.Frame(main_container)
+        left_panel.grid(row=0, column=0, sticky="nsew")
 
-        config_grid = tb.Frame(config_card)
-        config_grid.pack(fill=X)
+        right_panel = tb.Frame(main_container)
+        right_panel.grid(row=0, column=1, sticky="ns", padx=(10, 0))
 
         # 主题设置
-        theme_frame = tb.LabelFrame(config_grid, text="界面主题", padding=10)
-        theme_frame.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 15))
-        
-        tb.Label(theme_frame, text="选择主题:").pack(side=LEFT, padx=5)
+        theme_frame = tb.LabelFrame(left_panel, text="界面主题", padding=10, bootstyle=INFO)
+        theme_frame.pack(fill="x", padx=5, pady=5)
+        theme_frame.columnconfigure(1, weight=1)
+
+        tb.Label(theme_frame, text="选择主题:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
         self.theme_var = tb.StringVar()
         self.theme_combo = tb.Combobox(theme_frame, width=10, state="readonly",
                                     textvariable=self.theme_var, bootstyle=PRIMARY)
         self.theme_combo['values'] = ('白天', '黑夜')
         self.theme_combo.set('白天')
-        self.theme_combo.pack(side=LEFT, padx=5)
+        self.theme_combo.grid(row=0, column=1, padx=5, pady=5, sticky="w")
         self.theme_combo.bind("<<ComboboxSelected>>", self.on_theme_change)
-        
-        # API设置
-        api_frame = tb.LabelFrame(config_grid, text="百度翻译API", padding=15)
-        api_frame.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 15))
 
-        tb.Label(api_frame, text="APPID:", font=('微软雅黑', 10)).grid(row=0, column=0, sticky=W, padx=5, pady=5)
-        self.appid_entry = tb.Entry(api_frame, width=40, bootstyle=PRIMARY, font=('微软雅黑', 10))
+        # API设置
+        api_frame = tb.LabelFrame(left_panel, text="百度翻译API", padding=15, bootstyle=INFO)
+        api_frame.pack(fill="x", padx=5, pady=5)
+        api_frame.columnconfigure(1, weight=1)
+
+        tb.Label(api_frame, text="APPID:", font=('微软雅黑', 10)).grid(row=0, column=0, sticky="w", padx=5, pady=5)
+        self.appid_entry = tb.Entry(api_frame, bootstyle=PRIMARY, font=('微软雅黑', 10))
         self.appid_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
 
-        tb.Label(api_frame, text="APPKEY:", font=('微软雅黑', 10)).grid(row=1, column=0, sticky=W, padx=5, pady=5)
-        self.appkey_entry = tb.Entry(api_frame, width=40, show="*", bootstyle=PRIMARY, font=('微软雅黑', 10))
+        tb.Label(api_frame, text="APPKEY:", font=('微软雅黑', 10)).grid(row=1, column=0, sticky="w", padx=5, pady=5)
+        self.appkey_entry = tb.Entry(api_frame, show="*", bootstyle=PRIMARY, font=('微软雅黑', 10))
         self.appkey_entry.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
-        
-        save_btn = tb.Button(config_grid, text="💾 保存配置", command=self.save_config, 
-                            bootstyle=SUCCESS, width=15)
-        save_btn.grid(row=2, column=0, columnspan=2, pady=(15, 0))
-        
-        config_grid.columnconfigure(1, weight=1)
 
+        # 快捷键设置
+        shortcuts_frame = tb.LabelFrame(left_panel, text="快捷键设置", padding=15, bootstyle=INFO)
+        shortcuts_frame.pack(fill="x", padx=5, pady=5)
+        shortcuts_frame.columnconfigure(1, weight=1)
+
+        # 翻译快捷键
+        tb.Label(shortcuts_frame, text="翻译:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
+        self.translate_shortcut = tb.Entry(shortcuts_frame, bootstyle=PRIMARY)
+        self.translate_shortcut.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+
+        # 清空快捷键
+        tb.Label(shortcuts_frame, text="清空:").grid(row=1, column=0, sticky="w", padx=5, pady=5)
+        self.clear_shortcut = tb.Entry(shortcuts_frame, bootstyle=PRIMARY)
+        self.clear_shortcut.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
+
+        # 截图快捷键
+        tb.Label(shortcuts_frame, text="截图翻译:").grid(row=2, column=0, sticky="w", padx=5, pady=5)
+        self.capture_shortcut = tb.Entry(shortcuts_frame, bootstyle=PRIMARY)
+        self.capture_shortcut.grid(row=2, column=1, padx=5, pady=5, sticky="ew")
+
+        # 加载已保存的快捷键配置
+        shortcuts = self.settings_manager.load_shortcuts()
+        self.translate_shortcut.insert(0, shortcuts.get('translate', '<Control-Return>'))
+        self.clear_shortcut.insert(0, shortcuts.get('clear', '<Control-d>'))
+        self.capture_shortcut.insert(0, shortcuts.get('capture', '<Control-s>'))
+
+        # 保存按钮移到右侧
+        save_btn = tb.Button(right_panel, text="💾 保存配置", command=self.save_config, 
+                            bootstyle=SUCCESS, width=15)
+        save_btn.pack(pady=10)
+    def bind_shortcuts(self):
+        """绑定快捷键"""
+        try:
+            # 先解绑所有已存在的快捷键
+            self.root.unbind_class('Toplevel', '<Control-Return>')
+            self.root.unbind_class('Toplevel', '<Control-d>')
+            self.root.unbind_class('Toplevel', '<Control-s>')
+            
+            # 加载快捷键配置
+            shortcuts = self.settings_manager.load_shortcuts()
+            
+            # 绑定新的快捷键
+            self.root.bind(shortcuts.get('translate', '<Control-Return>'), lambda e: self.translate())
+            self.root.bind(shortcuts.get('clear', '<Control-d>'), lambda e: self.clear_text())
+            self.root.bind(shortcuts.get('capture', '<Control-s>'), lambda e: self.capture_translate())
+            
+            logging.info("快捷键绑定完成")
+        except Exception as e:
+            logging.error(f"绑定快捷键失败: {str(e)}")
+            Messagebox.show_error("错误", f"绑定快捷键失败: {str(e)}")
 
     def setup_about_tab(self):
         """设置关于标签页"""
@@ -263,26 +311,59 @@ class UIManager:
     
     def save_config(self):
         """保存配置"""
-        appid = self.appid_entry.get().strip()
-        appkey = self.appkey_entry.get().strip()
-        
-        if self.settings_manager.save_config(appid, appkey):
-            self.translator = BaiduTranslator(appid, appkey)
-            Messagebox.show_info("成功", "配置已保存")
+        try:
+            # 保存API配置
+            appid = self.appid_entry.get().strip()
+            appkey = self.appkey_entry.get().strip()
+            
+            # 保存快捷键配置
+            shortcuts = {
+                'translate': self.translate_shortcut.get(),
+                'clear': self.clear_shortcut.get(),
+                'capture': self.capture_shortcut.get()
+            }
+            
+            # 保存主题配置
+            theme = self.theme_var.get()
+            
+            # 保存所有配置
+            if self.settings_manager.save_all_config(appid, appkey, shortcuts, theme):
+                self.translator = BaiduTranslator(appid, appkey)
+                Messagebox.show_info("成功", "配置已保存")
+        except Exception as e:
+            logging.error(f"保存配置失败: {str(e)}")
+            Messagebox.show_error("错误", f"保存配置失败: {str(e)}")
     
     def load_config(self):
         """加载配置"""
-        appid, appkey = self.settings_manager.load_config()
-        
-        if appid and appkey:
-            self.appid_entry.delete(0, "end")
-            self.appid_entry.insert(0, appid)
+        try:
+            # 加载API配置
+            appid, appkey = self.settings_manager.load_config()
+            if appid and appkey:
+                self.appid_entry.delete(0, "end")
+                self.appid_entry.insert(0, appid)
+                self.appkey_entry.delete(0, "end")
+                self.appkey_entry.insert(0, appkey)
+                self.translator = BaiduTranslator(appid, appkey)
             
-            self.appkey_entry.delete(0, "end")
-            self.appkey_entry.insert(0, appkey)
+            # 加载快捷键配置
+            shortcuts = self.settings_manager.load_shortcuts()
+            self.translate_shortcut.delete(0, "end")
+            self.translate_shortcut.insert(0, shortcuts.get('translate', '<Control-Return>'))
+            self.clear_shortcut.delete(0, "end")
+            self.clear_shortcut.insert(0, shortcuts.get('clear', '<Control-d>'))
+            self.capture_shortcut.delete(0, "end")
+            self.capture_shortcut.insert(0, shortcuts.get('capture', '<Control-s>'))
             
-            self.translator = BaiduTranslator(appid, appkey)
+            # 加载主题配置
+            theme = self.settings_manager.load_theme()
+            self.theme_var.set(theme)
+            self.settings_manager.set_theme(theme)
+            
             logging.info("配置加载成功")
+        except Exception as e:
+            logging.error(f"加载配置失败: {str(e)}")
+            Messagebox.show_error("错误", f"加载配置失败: {str(e)}")
 
     def translate(self):
         """执行翻译操作"""
