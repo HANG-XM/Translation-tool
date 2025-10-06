@@ -15,9 +15,7 @@ class BaiduTranslator:
         self.appid = appid
         self.appkey = appkey
         self.api_url = 'https://fanyi-api.baidu.com/api/trans/vip/translate'
-        # 创建会话对象，提高请求效率
         self.session = requests.Session()
-        # 设置请求超时时间
         self.timeout = 10
         
     def translate(self, query, from_lang='auto', to_lang='zh'):
@@ -38,9 +36,8 @@ class BaiduTranslator:
         }
         
         try:
-            # 使用会话对象发送请求，并设置超时
             response = self.session.get(self.api_url, params=params, timeout=self.timeout)
-            response.raise_for_status()  # 检查请求是否成功
+            response.raise_for_status()
             result = response.json()
             
             if 'error_code' in result:
@@ -106,12 +103,10 @@ class TranslatorApp:
     def check_directories(self):
         """检查并创建必要的目录"""
         try:
-            # 检查并创建log目录
             if not os.path.exists('log'):
                 os.makedirs('log')
                 logging.info("创建log目录")
                 
-            # 检查并创建data目录
             if not os.path.exists('data'):
                 os.makedirs('data')
                 logging.info("创建data目录")
@@ -129,16 +124,19 @@ class TranslatorApp:
             # APPID 输入框
             ttk.Label(config_frame, text="APPID:").grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
             self.appid_entry = ttk.Entry(config_frame, width=50)
-            self.appid_entry.grid(row=0, column=1, padx=5, pady=5, sticky=tk.W)
+            self.appid_entry.grid(row=0, column=1, padx=5, pady=5, sticky=tk.W+tk.E)
             
             # APPKEY 输入框
             ttk.Label(config_frame, text="APPKEY:").grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
             self.appkey_entry = ttk.Entry(config_frame, width=50, show="*")
-            self.appkey_entry.grid(row=1, column=1, padx=5, pady=5, sticky=tk.W)
+            self.appkey_entry.grid(row=1, column=1, padx=5, pady=5, sticky=tk.W+tk.E)
             
             # 保存配置按钮
             save_btn = ttk.Button(config_frame, text="保存配置", command=self.save_config)
             save_btn.grid(row=1, column=2, padx=20, pady=5)
+            
+            # 让配置框架的列可以扩展
+            config_frame.columnconfigure(1, weight=1)
             
             # 源文本框架
             source_frame = ttk.LabelFrame(self.root, text="源文本", padding=5)
@@ -183,21 +181,17 @@ class TranslatorApp:
                 messagebox.showerror("错误", "请输入APPID和APPKEY")
                 return
                 
-            # 创建配置解析器
             config = configparser.ConfigParser()
             config['BaiduAPI'] = {
                 'appid': appid,
                 'appkey': appkey
             }
             
-            # 确保data目录存在
             os.makedirs('data', exist_ok=True)
             
-            # 保存配置文件
             with open(self.config_file, 'w', encoding='utf-8') as f:
                 config.write(f)
             
-            # 更新翻译器实例
             self.translator = BaiduTranslator(appid, appkey)
             logging.info("配置保存成功")
             messagebox.showinfo("成功", "配置已保存")
@@ -219,14 +213,12 @@ class TranslatorApp:
                 appid = config['BaiduAPI'].get('appid', '')
                 appkey = config['BaiduAPI'].get('appkey', '')
                 
-                # 填充到输入框
                 self.appid_entry.delete(0, tk.END)
                 self.appid_entry.insert(0, appid)
                 
                 self.appkey_entry.delete(0, tk.END)
                 self.appkey_entry.insert(0, appkey)
                 
-                # 如果有配置，创建翻译器实例
                 if appid and appkey:
                     self.translator = BaiduTranslator(appid, appkey)
                     logging.info("配置加载成功")
@@ -246,9 +238,8 @@ class TranslatorApp:
                 messagebox.showwarning("警告", "请输入要翻译的文本")
                 return
             
-            # 禁用翻译按钮，防止重复点击
             self.translate_btn.state(['disabled'])
-            self.root.update()  # 强制更新界面
+            self.root.update()
             
             result = self.translator.translate(source_text)
             self.target_text.delete("1.0", tk.END)
@@ -259,7 +250,6 @@ class TranslatorApp:
             logging.error(f"翻译操作失败: {str(e)}")
             messagebox.showerror("错误", f"翻译失败: {str(e)}")
         finally:
-            # 恢复翻译按钮状态
             self.translate_btn.state(['!disabled'])
             
     def clear_text(self):
