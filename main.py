@@ -132,13 +132,15 @@ class TranslatorApp:
     def __init__(self, root):
         self.root = root
         self.root.title("翻译工具")
-        self.root.geometry("800x600")
+        # 修改窗口大小和最小尺寸
+        self.root.geometry("1000x700")  # 增大窗口尺寸
+        self.root.minsize(800, 600)     # 设置最小窗口尺寸
         
         # 初始化变量
         self.translator = None
         self.config_file = os.path.join('data', 'config.ini')
-        self._config_lock = threading.Lock()  # 添加配置文件操作锁
-        self._translate_lock = threading.Lock()  # 添加翻译操作锁
+        self._config_lock = threading.Lock()
+        self._translate_lock = threading.Lock()
         
         # 设置日志
         self.setup_logging()
@@ -196,78 +198,113 @@ class TranslatorApp:
     def setup_ui(self):
         """设置用户界面"""
         try:
+            # 主容器
+            main_container = tb.Frame(self.root)
+            main_container.pack(padx=15, pady=15, fill=BOTH, expand=True)  # 增加内边距
+
             # 配置框架
-            config_frame = tb.Frame(self.root)
-            config_frame.pack(padx=10, pady=5, fill=X)
+            config_frame = tb.LabelFrame(main_container, text="配置", padding=15, bootstyle=INFO)
+            config_frame.pack(fill=X, pady=(0, 15))  # 增加底部间距
+            
+            # 配置内容网格布局
+            config_grid = tb.Frame(config_frame)
+            config_grid.pack(fill=X)
             
             # 主题选择
-            tb.Label(config_frame, text="主题:").pack(side=LEFT, padx=5)
+            tb.Label(config_grid, text="主题:").grid(row=0, column=0, padx=8, sticky=W)  # 增加间距
             self.theme_var = tb.StringVar()
-            self.theme_combo = tb.Combobox(config_frame, width=10, state="readonly", textvariable=self.theme_var, bootstyle=PRIMARY)
+            self.theme_combo = tb.Combobox(config_grid, width=12, state="readonly",  # 增加宽度
+                                        textvariable=self.theme_var, bootstyle=PRIMARY)
             self.theme_combo['values'] = ('白天', '黑夜')
             self.theme_combo.set('白天')
-            self.theme_combo.pack(side=LEFT, padx=5)
+            self.theme_combo.grid(row=0, column=1, padx=8)
             self.theme_combo.bind("<<ComboboxSelected>>", self.on_theme_change)
             
-            # APPID 标签和输入框
-            tb.Label(config_frame, text="APPID:").pack(side=LEFT, padx=5)
-            self.appid_entry = tb.Entry(config_frame, width=30)
-            self.appid_entry.pack(side=LEFT, padx=5)
+            # APPID 输入
+            tb.Label(config_grid, text="APPID:").grid(row=0, column=2, padx=(25, 8), sticky=W)  # 增加间距
+            self.appid_entry = tb.Entry(config_grid, width=35)  # 增加宽度
+            self.appid_entry.grid(row=0, column=3, padx=8)
             
-            # APPKEY 标签和输入框
-            tb.Label(config_frame, text="APPKEY:").pack(side=LEFT, padx=5)
-            self.appkey_entry = tb.Entry(config_frame, width=30, show="*")
-            self.appkey_entry.pack(side=LEFT, padx=5)
+            # APPKEY 输入
+            tb.Label(config_grid, text="APPKEY:").grid(row=0, column=4, padx=(25, 8), sticky=W)  # 增加间距
+            self.appkey_entry = tb.Entry(config_grid, width=35, show="*")  # 增加宽度
+            self.appkey_entry.grid(row=0, column=5, padx=8)
             
             # 保存配置按钮
-            save_btn = tb.Button(config_frame, text="保存配置", command=self.save_config, bootstyle=SUCCESS)
-            save_btn.pack(side=LEFT, padx=20)
-            
+            save_btn = tb.Button(config_grid, text="保存配置", command=self.save_config, 
+                            bootstyle=SUCCESS, width=15)  # 增加按钮宽度
+            save_btn.grid(row=0, column=6, padx=(25, 0))
+
             # 语言选择框架
-            lang_frame = tb.Frame(self.root)
-            lang_frame.pack(padx=10, pady=5, fill=X)
+            lang_frame = tb.LabelFrame(main_container, text="语言设置", padding=15, bootstyle=INFO)
+            lang_frame.pack(fill=X, pady=(0, 15))  # 增加底部间距
+            
+            # 语言选择网格布局
+            lang_grid = tb.Frame(lang_frame)
+            lang_grid.pack(fill=X)
             
             # 源语言选择
-            tb.Label(lang_frame, text="源语言:").pack(side=LEFT, padx=5)
-            self.source_lang = tb.Combobox(lang_frame, width=15, state="readonly", bootstyle=INFO)
+            tb.Label(lang_grid, text="源语言:").grid(row=0, column=0, padx=8, sticky=W)  # 增加间距
+            self.source_lang = tb.Combobox(lang_grid, width=18, state="readonly", bootstyle=INFO)  # 增加宽度
             self.source_lang['values'] = ('自动检测', '中文', '英语', '日语', '韩语', '法语', '德语', '俄语', '西班牙语')
             self.source_lang.set('自动检测')
-            self.source_lang.pack(side=LEFT, padx=5)
+            self.source_lang.grid(row=0, column=1, padx=8)
             
             # 目标语言选择
-            tb.Label(lang_frame, text="目标语言:").pack(side=LEFT, padx=5)
-            self.target_lang = tb.Combobox(lang_frame, width=15, state="readonly", bootstyle=INFO)
+            tb.Label(lang_grid, text="目标语言:").grid(row=0, column=2, padx=(25, 8), sticky=W)  # 增加间距
+            self.target_lang = tb.Combobox(lang_grid, width=18, state="readonly", bootstyle=INFO)  # 增加宽度
             self.target_lang['values'] = ('中文', '英语', '日语', '韩语', '法语', '德语', '俄语', '西班牙语')
             self.target_lang.set('英语')
-            self.target_lang.pack(side=LEFT, padx=5)
-            
+            self.target_lang.grid(row=0, column=3, padx=8)
+
+            # 文本区域容器
+            text_container = tb.Frame(main_container)
+            text_container.pack(fill=BOTH, expand=True)
+
+            # 使用PanedWindow来分配空间
+            paned_window = tb.PanedWindow(text_container, orient=VERTICAL)
+            paned_window.pack(fill=BOTH, expand=True)
+
             # 源文本框架
-            source_frame = tb.Labelframe(self.root, text="源文本", padding=5, bootstyle=PRIMARY)
-            source_frame.pack(padx=10, pady=5, fill=BOTH, expand=True)
-            
+            source_frame = tb.LabelFrame(paned_window, text="源文本", padding=10, bootstyle=PRIMARY)
+            paned_window.add(source_frame, weight=1)  # 设置权重为1
+
             # 源文本编辑框
-            self.source_text = ScrolledText(source_frame, wrap="word", width=80, height=10, font=('微软雅黑', 11))
-            self.source_text.pack(padx=5, pady=5, fill=BOTH, expand=True)
-            
+            self.source_text = ScrolledText(source_frame, wrap="word", height=8,  # 减小高度到8行
+                                        font=('微软雅黑', 12))
+            self.source_text.pack(padx=10, pady=10, fill=BOTH, expand=True)
+
             # 操作按钮框架
-            button_frame = tb.Frame(self.root)
-            button_frame.pack(padx=10, pady=5, fill=X)
-            
+            button_frame = tb.Frame(paned_window)
+            button_frame.pack(fill=X, pady=5)
+            paned_window.add(button_frame, weight=0)  # 按钮区域不伸缩
+
+            # 居中放置按钮
+            button_container = tb.Frame(button_frame)
+            button_container.pack()
+
             # 翻译按钮
-            self.translate_btn = tb.Button(button_frame, text="翻译", command=self.translate, bootstyle=PRIMARY)
-            self.translate_btn.pack(side=LEFT, padx=5)
-            
+            self.translate_btn = tb.Button(button_container, text="翻译", command=self.translate, 
+                                        bootstyle=PRIMARY, width=18)
+            self.translate_btn.pack(side=LEFT, padx=10)
+
             # 清空按钮
-            clear_btn = tb.Button(button_frame, text="清空", command=self.clear_text, bootstyle=WARNING)
-            clear_btn.pack(side=LEFT, padx=5)
-            
+            clear_btn = tb.Button(button_container, text="清空", command=self.clear_text, 
+                                bootstyle=WARNING, width=18)
+            clear_btn.pack(side=LEFT, padx=10)
+
             # 目标文本框架
-            target_frame = tb.Labelframe(self.root, text="翻译结果", padding=5, bootstyle=PRIMARY)
-            target_frame.pack(padx=10, pady=5, fill=BOTH, expand=True)
-            
+            target_frame = tb.LabelFrame(paned_window, text="翻译结果", padding=10, bootstyle=PRIMARY)
+            paned_window.add(target_frame, weight=2)  # 设置权重为2，比源文本框大
+
             # 目标文本编辑框
-            self.target_text = ScrolledText(target_frame, wrap="word", width=80, height=10, font=('微软雅黑', 11))
-            self.target_text.pack(padx=5, pady=5, fill=BOTH, expand=True)
+            self.target_text = ScrolledText(target_frame, wrap="word", height=12, 
+                                        font=('微软雅黑', 12))
+            self.target_text.pack(padx=10, pady=10, fill=BOTH, expand=True)
+            
+            # 设置网格列权重
+            config_grid.columnconfigure(3, weight=1)
+            config_grid.columnconfigure(5, weight=1)
             
             logging.info("界面初始化完成")
         except Exception as e:
