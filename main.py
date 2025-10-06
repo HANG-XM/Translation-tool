@@ -9,6 +9,8 @@ import os
 import configparser
 import logging
 from datetime import datetime
+import threading
+import time
 
 class BaiduTranslator:
     def __init__(self, appid, appkey):
@@ -17,11 +19,36 @@ class BaiduTranslator:
         self.api_url = 'https://fanyi-api.baidu.com/api/trans/vip/translate'
         self.session = requests.Session()
         self.timeout = 10
+        # 添加连接池配置
+        adapter = requests.adapters.HTTPAdapter(
+            pool_connections=10,
+            pool_maxsize=10,
+            max_retries=3
+        )
+        self.session.mount('http://', adapter)
+        self.session.mount('https://', adapter)
+
+        self._cache = {}  # 添加缓存字典
+        self._cache_size = 100  # 缓存大小
+        self._cache_timeout = 3600  # 缓存过期时间，单位秒
         
     def translate(self, query, from_lang='auto', to_lang='zh'):
         if not query.strip():
             return "请输入要翻译的文本"
-            
+
+        # 检查缓存
+        cache_key = f"{from_lang}:{to_lang}:{query}"
+        current_time = time.time()
+
+        # 检查缓存是否存在且未过期
+        if cache_key in self._cache:
+            cached_time, cached_result = self._cache[cache_key]
+            if time.time() - cached_time < self._cache_timeout:
+                return cached_result
+            else:
+                # 缓存过期，删除
+                del self._cache[cache_key]
+
         salt = str(random.randint(32768, 65536))
         sign_str = self.appid + query + salt + self.appkey
         sign = hashlib.md5(sign_str.encode('utf-8')).hexdigest()
@@ -51,7 +78,14 @@ class BaiduTranslator:
                 return "未获取到翻译结果"
             
             translations = [item['dst'] for item in trans_result]
-            return '\n'.join(translations)
+            result_text = '\n'.join(translations)
+
+            # 缓存结果
+            if len(self._cache) >= self._cache_size:
+                self._cache.clear()
+            self._cache[cache_key] = (current_time, result_text)
+            
+            return result_text
             
         except requests.exceptions.RequestException as e:
             error_msg = f"网络请求失败: {str(e)}"
@@ -75,6 +109,8 @@ class TranslatorApp:
         # 初始化变量
         self.translator = None
         self.config_file = os.path.join('data', 'config.ini')
+        self._config_lock = threading.Lock()  # 添加配置文件操作锁
+        self._translate_lock = threading.Lock()  # 添加翻译操作锁
         
         # 设置日志
         self.setup_logging()
@@ -91,14 +127,28 @@ class TranslatorApp:
     def setup_logging(self):
         """设置日志记录"""
         log_file = os.path.join('log', f'translator_{datetime.now().strftime("%Y%m%d")}.log')
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler(log_file, encoding='utf-8'),
-                logging.StreamHandler()
-            ]
+        
+        # 创建日志格式器
+        formatter = logging.Formatter(
+            '%(asctime)s - %(levelname)s - %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S'
         )
+        
+        # 文件处理器
+        file_handler = logging.FileHandler(log_file, encoding='utf-8')
+        file_handler.setFormatter(formatter)
+        file_handler.setLevel(logging.INFO)
+        
+        # 控制台处理器
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        console_handler.setLevel(logging.WARNING)
+        
+        # 配置根日志记录器
+        logger = logging.getLogger()
+        logger.setLevel(logging.INFO)
+        logger.addHandler(file_handler)
+        logger.addHandler(console_handler)
         
     def check_directories(self):
         """检查并创建必要的目录"""
@@ -131,7 +181,7 @@ class TranslatorApp:
             self.appkey_entry = ttk.Entry(config_frame, width=30)
             self.appkey_entry.pack(side=tk.LEFT, padx=5)
             # 设置密码显示模式
-            self.appid_entry.configure(show="*")
+            self.appkey_entry.configure(show="*")
             
             # 保存配置按钮
             save_btn = ttk.Button(config_frame, text="保存配置", command=self.save_config)
@@ -198,20 +248,39 @@ class TranslatorApp:
                 messagebox.showerror("错误", "请输入APPID和APPKEY")
                 return
                 
-            config = configparser.ConfigParser()
-            config['BaiduAPI'] = {
-                'appid': appid,
-                'appkey': appkey
-            }
-            
-            os.makedirs('data', exist_ok=True)
-            
-            with open(self.config_file, 'w', encoding='utf-8') as f:
-                config.write(f)
+            with self._config_lock:  # 使用锁保护文件操作
+                config = configparser.ConfigParser()
+                config['BaiduAPI'] = {
+                    'appid': appid,
+                    'appkey': appkey
+                }
+                
+                os.makedirs('data', exist_ok=True)
+                
+                # 使用临时文件写入，避免写入失败导致原文件损坏
+                temp_file = self.config_file + '.tmp'
+                try:
+                    # 如果临时文件已存在，先删除
+                    if os.path.exists(temp_file):
+                        os.remove(temp_file)
+                    # 写入临时文件
+                    with open(temp_file, 'w', encoding='utf-8') as f:
+                        config.write(f)
+                    # 原子操作重命名文件
+                    os.replace(temp_file, self.config_file)
+                except Exception as e:
+                    # 如果操作失败，确保清理临时文件
+                    if os.path.exists(temp_file):
+                        try:
+                            os.remove(temp_file)
+                        except:
+                            pass
+                    raise e
             
             self.translator = BaiduTranslator(appid, appkey)
             logging.info("配置保存成功")
             messagebox.showinfo("成功", "配置已保存")
+
         except Exception as e:
             logging.error(f"保存配置失败: {str(e)}")
             messagebox.showerror("错误", f"保存配置失败: {str(e)}")
@@ -255,6 +324,28 @@ class TranslatorApp:
                 messagebox.showwarning("警告", "请输入要翻译的文本")
                 return
             
+            # 检查是否已有翻译在进行
+            if self._translate_lock.locked():
+                messagebox.showwarning("提示", "正在翻译中，请稍候...")
+                return
+            
+            # 禁用所有相关控件
+            self._set_controls_state('disabled')
+            
+            # 使用线程执行翻译
+            threading.Thread(target=self._translate_thread, 
+                        args=(source_text,), 
+                        daemon=True).start()
+            
+        except Exception as e:
+            logging.error(f"翻译操作失败: {str(e)}")
+            messagebox.showerror("错误", f"翻译失败: {str(e)}")
+            self._set_controls_state('normal')
+            
+
+    def _translate_thread(self, source_text):
+        """翻译线程"""
+        try:
             # 获取语言代码
             lang_map = {
                 '自动检测': 'auto',
@@ -271,20 +362,57 @@ class TranslatorApp:
             from_lang = lang_map[self.source_lang.get()]
             to_lang = lang_map[self.target_lang.get()]
             
-            self.translate_btn.state(['disabled'])
-            self.root.update()
-            
             result = self.translator.translate(source_text, from_lang=from_lang, to_lang=to_lang)
+            
+            # 在主线程中更新界面
+            self.root.after(0, self._update_result, result)
+        except Exception as e:
+            error_msg = f"翻译失败: {str(e)}"
+            logging.error(error_msg)
+            self.root.after(0, self._show_error, error_msg)
+        finally:
+            # 确保控件状态恢复正常
+            self.root.after(0, self._set_controls_state, 'normal')
+
+    def _update_result(self, result):
+        """更新翻译结果"""
+        try:
+            self.target_text.configure(state='normal')  # 确保可写入
             self.target_text.delete("1.0", tk.END)
             self.target_text.insert("1.0", result)
-            
             logging.info("翻译操作完成")
         except Exception as e:
-            logging.error(f"翻译操作失败: {str(e)}")
-            messagebox.showerror("错误", f"翻译失败: {str(e)}")
+            logging.error(f"更新翻译结果失败: {str(e)}")
         finally:
-            self.translate_btn.state(['!disabled'])
+            self._set_controls_state('normal')
+
+    def _show_error(self, error_msg):
+        """显示错误信息"""
+        try:
+            messagebox.showerror("错误", error_msg)
+        except Exception as e:
+            logging.error(f"显示错误信息失败: {str(e)}")
+        finally:
+            self._set_controls_state('normal')
+
+    def _set_controls_state(self, state):
+        """设置控件状态"""
+        try:
+            # Button 状态转换
+            self.translate_btn.configure(state=state)
             
+            # Combobox 状态转换
+            combo_state = 'readonly' if state == 'normal' else 'disabled'
+            self.source_lang.configure(state=combo_state)
+            self.target_lang.configure(state=combo_state)
+
+            # 文本框始终保持可编辑
+            self.source_text.configure(state='normal')
+            self.target_text.configure(state='normal')
+            
+        except Exception as e:
+            logging.error(f"设置控件状态失败: {str(e)}")
+
     def clear_text(self):
         """清空文本框"""
         try:
