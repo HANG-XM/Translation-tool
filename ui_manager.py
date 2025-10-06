@@ -5,6 +5,8 @@ from ttkbootstrap.dialogs import Messagebox
 import threading
 import logging
 from concurrent.futures import ThreadPoolExecutor
+import os
+import time
 from translator import BaiduTranslator
 
 class UIManager:
@@ -95,6 +97,10 @@ class UIManager:
             clear_btn = tb.Button(button_container, text="清空", command=self.clear_text, 
                                 bootstyle=WARNING, width=18)
             clear_btn.pack(side=LEFT, padx=10)
+
+            capture_btn = tb.Button(button_container, text="截图翻译", command=self.capture_translate, 
+                                  bootstyle=INFO, width=18)
+            capture_btn.pack(side=LEFT, padx=10)
 
             target_frame = tb.LabelFrame(paned_window, text="翻译结果", padding=10, bootstyle=PRIMARY)
             paned_window.add(target_frame, weight=2)
@@ -192,6 +198,173 @@ class UIManager:
             self.root.after(0, self._show_error, error_msg)
         finally:
             self.root.after(0, self._set_controls_state, 'normal')
+
+    def capture_translate(self):
+        """截图翻译"""
+        try:
+            if not hasattr(self, 'translator') or not self.translator:
+                Messagebox.show_error("错误", "请先保存配置")
+                return
+                
+            import pyautogui
+            from PIL import Image, ImageTk, ImageDraw
+            import pytesseract
+            import tkinter as tk
+            
+            # 最小化窗口
+            self.root.iconify()
+            time.sleep(0.5)  # 等待窗口最小化
+            
+            # 获取全屏截图
+            screenshot = pyautogui.screenshot()
+            
+            # 创建选择窗口
+            selector = tk.Toplevel()
+            selector.attributes('-fullscreen', True)
+            selector.attributes('-alpha', 0.4)
+            selector.configure(background='black')
+            
+            # 创建画布
+            canvas = tk.Canvas(selector, highlightthickness=0)
+            canvas.pack(fill=tk.BOTH, expand=True)
+            
+            # 显示截图
+            photo = ImageTk.PhotoImage(screenshot)
+            canvas.create_image(0, 0, anchor=tk.NW, image=photo)
+            canvas.image = photo  # 保持引用
+            
+            # 选择框相关变量
+            selection_rect = None
+            start_x = None
+            start_y = None
+            size_label = None  # 移到函数开头声明
+            
+            def create_selection_rect(x1, y1, x2, y2):
+                """创建选择框，包括边框和半透明填充"""
+                # 外边框
+                canvas.create_rectangle(
+                    x1, y1, x2, y2,
+                    outline='red', width=2, tags='selection'
+                )
+                # 半透明填充
+                canvas.create_rectangle(
+                    x1, y1, x2, y2,
+                    fill='white', stipple='gray50', tags='selection'
+                )
+                
+            def update_selection_rect(x1, y1, x2, y2):
+                """更新选择框"""
+                nonlocal size_label  # 在这里声明nonlocal
+                canvas.delete('selection')
+                create_selection_rect(x1, y1, x2, y2)
+                
+                # 更新尺寸标签
+                if size_label:
+                    canvas.delete(size_label)
+                width = abs(x2 - x1)
+                height = abs(y2 - y1)
+                size_label = canvas.create_text(
+                    x2, y2 - 20,
+                    text=f"{width} × {height}",
+                    fill='white',
+                    font=('微软雅黑', 10),
+                    anchor=tk.S,
+                    tags='selection'
+                )
+                
+            def on_mouse_down(event):
+                nonlocal start_x, start_y
+                start_x = event.x
+                start_y = event.y
+                create_selection_rect(start_x, start_y, start_x, start_y)
+                
+            def on_mouse_drag(event):
+                if start_x is not None and start_y is not None:
+                    update_selection_rect(start_x, start_y, event.x, event.y)
+                    
+            def on_mouse_up(event):
+                if start_x is not None and start_y is not None:
+                    # 获取最终选择区域
+                    x = min(start_x, event.x)
+                    y = min(start_y, event.y)
+                    width = abs(event.x - start_x)
+                    height = abs(event.y - start_y)
+                    
+                    # 检查选择区域是否有效
+                    if width < 5 or height < 5:
+                        selector.destroy()
+                        self.root.deiconify()
+                        return
+                    
+                    # 裁剪选定区域
+                    selected_area = screenshot.crop((x, y, x + width, y + height))
+                    
+                    # 保存截图到临时文件
+                    temp_image = os.path.join('data', 'temp_screenshot.png')
+                    selected_area.save(temp_image)
+                    
+                    selector.destroy()
+                    
+                    # 使用OCR识别文本
+                    text = pytesseract.image_to_string(Image.open(temp_image), lang='chi_sim+eng')
+                    
+                    # 恢复主窗口
+                    self.root.deiconify()
+                    
+                    if text.strip():
+                        self.source_text.text.delete("1.0", "end")
+                        self.source_text.text.insert("1.0", text.strip())
+                        # 自动触发翻译
+                        self.translate()
+                    else:
+                        Messagebox.show_warning("提示", "未能识别到文本")
+                        
+                    # 删除临时文件
+                    try:
+                        os.remove(temp_image)
+                    except:
+                        pass
+            
+            # 绑定鼠标事件
+            canvas.bind('<Button-1>', on_mouse_down)
+            canvas.bind('<B1-Motion>', on_mouse_drag)
+            canvas.bind('<ButtonRelease-1>', on_mouse_up)
+            
+            # 添加提示文本
+            hint_frame = tk.Frame(selector, bg='black')
+            hint_frame.place(relx=0.5, rely=0.1, anchor='center')
+            
+            tk.Label(
+                hint_frame,
+                text="按住鼠标左键并拖动来选择要翻译的区域",
+                bg='black',
+                fg='white',
+                font=('微软雅黑', 12)
+            ).pack()
+            
+            tk.Label(
+                hint_frame,
+                text="按 ESC 键取消",
+                bg='black',
+                fg='gray',
+                font=('微软雅黑', 10)
+            ).pack()
+            
+            # 绑定ESC键取消选择
+            def on_escape(event):
+                selector.destroy()
+                self.root.deiconify()
+            selector.bind('<Escape>', on_escape)
+            
+            # 等待用户选择
+            selector.wait_window()
+                
+        except Exception as e:
+            logging.error(f"截图翻译失败: {str(e)}")
+            Messagebox.showerror("错误", f"截图翻译失败: {str(e)}")
+            self.root.deiconify()  # 确保窗口恢复
+
+
 
     def _update_result(self, result):
         """更新翻译结果"""

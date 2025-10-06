@@ -4,6 +4,7 @@ import os
 import logging
 import configparser
 from datetime import datetime
+import time
 from settings_manager import SettingsManager
 from ui_manager import UIManager
 

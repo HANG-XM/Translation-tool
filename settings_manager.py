@@ -13,6 +13,9 @@ class SettingsManager:
         self._config_cache = None  # 添加配置缓存
         self._config_cache_time = 0  # 配置缓存时间
         
+        # 确保数据目录存在
+        os.makedirs(os.path.dirname(self.config_file), exist_ok=True)
+        
     def save_config(self, appid, appkey):
         """保存配置到文件"""
         try:

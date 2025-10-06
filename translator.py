@@ -40,7 +40,17 @@ class BaiduTranslator:
         self._cache_size = 100
         self._cache_timeout = 3600
         
+    def preprocess_text(self, text):
+        """预处理文本，清理OCR识别可能产生的特殊字符"""
+        # 替换常见的OCR错误字符
+        text = text.replace('|', 'I').replace('[]', '0').replace('O', '0')
+        # 移除多余的空行和空格
+        lines = [line.strip() for line in text.split('\n') if line.strip()]
+        return '\n'.join(lines)
+        
     def translate(self, query, from_lang='auto', to_lang='zh'):
+        # 预处理文本
+        query = self.preprocess_text(query)
         if not query.strip():
             return "请输入要翻译的文本"
 
