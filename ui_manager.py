@@ -123,7 +123,7 @@ class UIManager:
         
         if self.settings_manager.save_config(appid, appkey):
             self.translator = BaiduTranslator(appid, appkey)
-            Messagebox.showinfo("成功", "配置已保存")
+            Messagebox.show_info("成功", "配置已保存")
     
     def load_config(self):
         """加载配置"""
@@ -143,16 +143,16 @@ class UIManager:
         """执行翻译操作"""
         try:
             if not hasattr(self, 'translator') or not self.translator:
-                Messagebox.showerror("错误", "请先保存配置")
+                Messagebox.show_error("错误", "请先保存配置")
                 return
                 
             source_text = self.source_text.get("1.0", "end").strip()
             if not source_text:
-                Messagebox.showwarning("警告", "请输入要翻译的文本")
+                Messagebox.show_warning("警告", "请输入要翻译的文本")
                 return
             
             if self._translate_lock.locked():
-                Messagebox.showwarning("提示", "正在翻译中，请稍候...")
+                Messagebox.show_warning("提示", "正在翻译中，请稍候...")
                 return
             
             self._set_controls_state('disabled')
@@ -162,7 +162,7 @@ class UIManager:
             
         except Exception as e:
             logging.error(f"翻译操作失败: {str(e)}")
-            Messagebox.showerror("错误", f"翻译失败: {str(e)}")
+            Messagebox.show_error("错误", f"翻译失败: {str(e)}")
             self._set_controls_state('normal')
     
     def _translate_thread(self, source_text):
@@ -209,7 +209,7 @@ class UIManager:
     def _show_error(self, error_msg):
         """显示错误信息"""
         try:
-            Messagebox.showerror("错误", error_msg)
+            Messagebox.show_error("错误", error_msg)
         except Exception as e:
             logging.error(f"显示错误信息失败: {str(e)}")
         finally:
@@ -243,4 +243,4 @@ class UIManager:
             logging.info("清空文本框")
         except Exception as e:
             logging.error(f"清空文本框失败: {str(e)}")
-            Messagebox.showerror("错误", f"清空文本框失败: {str(e)}")
+            Messagebox.show_error("错误", f"清空文本框失败: {str(e)}")

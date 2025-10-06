@@ -17,7 +17,7 @@ class SettingsManager:
         """保存配置到文件"""
         try:
             if not appid or not appkey:
-                Messagebox.showerror("错误", "请输入APPID和APPKEY")
+                Messagebox.show_error("错误", "请输入APPID和APPKEY")
                 return False
                 
             with self._config_lock:
@@ -50,7 +50,7 @@ class SettingsManager:
             return True
 
         except Exception as e:
-            Messagebox.showerror("错误", f"保存配置失败: {str(e)}")
+            Messagebox.show_error("错误", f"保存配置失败: {str(e)}")
             return False
             
     def load_config(self):
@@ -78,7 +78,7 @@ class SettingsManager:
             
             return None, None
         except Exception as e:
-            Messagebox.showerror("错误", f"加载配置失败: {str(e)}")
+            Messagebox.show_error("错误", f"加载配置失败: {str(e)}")
             return None, None
             
     def set_theme(self, theme):

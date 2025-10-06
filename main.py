@@ -77,7 +77,7 @@ def main():
         root.mainloop()
     except Exception as e:
         logging.critical(f"程序启动失败: {str(e)}")
-        Messagebox.showerror("错误", f"程序启动失败: {str(e)}")
+        Messagebox.show_error("错误", f"程序启动失败: {str(e)}")
 
 if __name__ == '__main__':
     main()

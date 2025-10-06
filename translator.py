@@ -5,6 +5,7 @@ import json
 import time
 import logging
 from collections import OrderedDict
+from urllib3.util.retry import Retry
 
 class BaiduTranslator:
     def __init__(self, appid, appkey):
@@ -15,11 +16,14 @@ class BaiduTranslator:
         self.timeout = 10
         
         # 优化连接池配置
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=0.5
+        )
         adapter = requests.adapters.HTTPAdapter(
             pool_connections=20,
             pool_maxsize=20,
-            max_retries=3,
-            backoff_factor=0.5
+            max_retries=retry_strategy
         )
         self.session.mount('http://', adapter)
         self.session.mount('https://', adapter)
