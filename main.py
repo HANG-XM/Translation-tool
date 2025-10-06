@@ -44,10 +44,12 @@ class BaiduTranslator:
         if cache_key in self._cache:
             cached_time, cached_result = self._cache[cache_key]
             if time.time() - cached_time < self._cache_timeout:
+                logging.info(f"使用缓存结果: {query} -> {cached_result}")
                 return cached_result
             else:
                 # 缓存过期，删除
                 del self._cache[cache_key]
+                logging.info(f"缓存已过期，删除缓存: {cache_key}")
 
         salt = str(random.randint(32768, 65536))
         sign_str = self.appid + query + salt + self.appkey
@@ -62,10 +64,19 @@ class BaiduTranslator:
             'sign': sign
         }
         
+        # 记录请求URL
+        request_url = f"{self.api_url}?{'&'.join(f'{k}={v}' for k, v in params.items())}"
+        logging.info(f"发送翻译请求: {request_url}")
+
         try:
             response = self.session.get(self.api_url, params=params, timeout=self.timeout)
+            logging.info(f"收到响应状态码: {response.status_code}")
+            
             response.raise_for_status()
             result = response.json()
+
+            # 记录完整的响应内容
+            logging.info(f"收到响应内容: {json.dumps(result, ensure_ascii=False, indent=2)}")
             
             if 'error_code' in result:
                 error_msg = result.get('error_msg', '未知错误')
@@ -77,13 +88,26 @@ class BaiduTranslator:
                 logging.warning("未获取到翻译结果")
                 return "未获取到翻译结果"
             
-            translations = [item['dst'] for item in trans_result]
+            # 处理多个翻译结果
+            translations = []
+            for item in trans_result:
+                if 'dst' in item:
+                    translations.append(item['dst'])
+                    logging.info(f"翻译结果项: {item}")
+            
+            if not translations:
+                logging.warning("未获取到有效的翻译结果")
+                return "未获取到有效的翻译结果"
+                
             result_text = '\n'.join(translations)
-
+            logging.info(f"翻译完成: {query} -> {result_text}")
+            
             # 缓存结果
             if len(self._cache) >= self._cache_size:
                 self._cache.clear()
+                logging.info("缓存已满，清空缓存")
             self._cache[cache_key] = (current_time, result_text)
+            logging.info(f"缓存翻译结果: {cache_key}")
             
             return result_text
             
