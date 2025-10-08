@@ -22,10 +22,58 @@ class UIManager:
     def setup_ui(self):
         """设置用户界面"""
         try:
+            # 移除默认标题栏
+            self.root.overrideredirect(True)
+            
             # 设置窗口样式
             self.root.style.configure('TNotebook', tabposition='nw')
             self.root.style.configure('TNotebook.Tab', padding=[20, 10])
+
+            # 创建自定义标题栏
+            self.title_bar = tb.Frame(self.root, bootstyle=PRIMARY)
+            self.title_bar.pack(fill="x")
             
+            # 标题栏左侧 - 标题文本
+            title_frame = tb.Frame(self.title_bar, bootstyle=PRIMARY)
+            title_frame.pack(side="left", padx=10)
+            title_label = tb.Label(title_frame, text="翻译工具", 
+                                 font=('微软雅黑', 10, 'bold'),
+                                 bootstyle="primary-inverse.TLabel")
+            title_label.pack(side="left", padx=5)
+            
+            # 标题栏右侧 - 控制按钮
+            control_frame = tb.Frame(self.title_bar, bootstyle=PRIMARY)
+            control_frame.pack(side="right")
+
+            # 最小化按钮
+            min_btn = tb.Button(control_frame, text="─", width=3,
+                              bootstyle="primary.TButton",
+                              command=self.root.iconify)
+            min_btn.pack(side="left", padx=2)
+            
+            # 最大化/还原按钮
+            self.max_btn = tb.Button(control_frame, text="□", width=3,
+                                   bootstyle="primary.TButton",
+                                   command=self.toggle_maximize)
+            self.max_btn.pack(side="left", padx=2)
+            
+            # 关闭按钮
+            close_btn = tb.Button(control_frame, text="✕", width=3,
+                                bootstyle="danger.TButton",
+                                command=self.root.quit)
+            close_btn.pack(side="left", padx=2)
+
+            # 绑定标题栏拖动事件
+            self.title_bar.bind('<Button-1>', self.start_move)
+            self.title_bar.bind('<B1-Motion>', self.on_move)
+            title_label.bind('<Button-1>', self.start_move)
+            title_label.bind('<B1-Motion>', self.on_move)
+            
+            # 存储窗口状态
+            self.is_maximized = False
+            self.normal_geometry = None
+            
+            # 创建主容器
             main_container = tb.Frame(self.root)
             main_container.pack(padx=20, pady=20, fill=BOTH, expand=True)
 
@@ -46,6 +94,31 @@ class UIManager:
         except Exception as e:
             logging.error(f"界面初始化失败: {str(e)}")
             Messagebox.show_error("错误", f"界面初始化失败: {str(e)}")
+
+    def start_move(self, event):
+        """开始移动窗口"""
+        self.x = event.x
+        self.y = event.y
+
+    def on_move(self, event):
+        """移动窗口"""
+        deltax = event.x - self.x
+        deltay = event.y - self.y
+        x = self.root.winfo_x() + deltax
+        y = self.root.winfo_y() + deltay
+        self.root.geometry(f"+{x}+{y}")
+
+    def toggle_maximize(self):
+        """切换窗口最大化状态"""
+        if not self.is_maximized:
+            self.normal_geometry = self.root.geometry()
+            self.root.geometry(f"{self.root.winfo_screenwidth()}x{self.root.winfo_screenheight()}+0+0")
+            self.max_btn.config(text="❐")
+            self.is_maximized = True
+        else:
+            self.root.geometry(self.normal_geometry)
+            self.max_btn.config(text="□")
+            self.is_maximized = False
 
     def setup_translate_tab(self):
         """设置截图翻译标签页"""
@@ -131,6 +204,7 @@ class UIManager:
         button_grid.columnconfigure(0, weight=1)
         button_grid.columnconfigure(1, weight=1)
         button_grid.columnconfigure(2, weight=1)
+
     def _create_tooltip(self, widget, text):
         """创建工具提示"""
         def on_enter(event):
@@ -223,6 +297,7 @@ class UIManager:
         save_btn = tb.Button(right_panel, text="💾 保存配置", command=self.save_config, 
                             bootstyle=SUCCESS, width=15)
         save_btn.pack(pady=10)
+
     def bind_shortcuts(self):
         """绑定快捷键"""
         try:
