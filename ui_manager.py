@@ -94,6 +94,25 @@ class UIManager:
         except Exception as e:
             logging.error(f"界面初始化失败: {str(e)}")
             Messagebox.show_error("错误", f"界面初始化失败: {str(e)}")
+    def update_titlebar_style(self, theme):
+        """更新标题栏样式"""
+        try:
+            if theme == '黑夜':
+                self.title_bar.configure(bootstyle='dark')
+                self.max_btn.configure(bootstyle='dark.TButton')
+                min_btn = self.title_bar.winfo_children()[1].winfo_children()[0]
+                min_btn.configure(bootstyle='dark.TButton')
+                close_btn = self.title_bar.winfo_children()[1].winfo_children()[2]
+                close_btn.configure(bootstyle='danger.TButton')
+            else:
+                self.title_bar.configure(bootstyle='primary')
+                self.max_btn.configure(bootstyle='primary.TButton')
+                min_btn = self.title_bar.winfo_children()[1].winfo_children()[0]
+                min_btn.configure(bootstyle='primary.TButton')
+                close_btn = self.title_bar.winfo_children()[1].winfo_children()[2]
+                close_btn.configure(bootstyle='danger.TButton')
+        except Exception as e:
+            logging.error(f"更新标题栏样式失败: {str(e)}")
 
     def start_move(self, event):
         """开始移动窗口"""
@@ -378,6 +397,7 @@ class UIManager:
         """主题切换事件"""
         theme = self.theme_var.get()
         self.settings_manager.set_theme(theme)
+        self.update_titlebar_style(theme)
     
     def save_config(self):
         """保存配置"""
