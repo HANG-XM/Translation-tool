@@ -213,7 +213,7 @@ class ConfigTabManager:
         self.notebook.add(config_frame, text="⚙️ 配置")
 
         main_container = tb.Frame(config_frame)
-        main_container.pack(padx=20, pady=20, fill=BOTH, expand=True)
+        main_container.pack(padx=20, pady=10, fill=BOTH, expand=True)  # 减少垂直内边距
         main_container.columnconfigure(0, weight=1)
 
         left_panel = tb.Frame(main_container)
@@ -259,20 +259,23 @@ class ConfigTabManager:
     def _create_shortcut_settings(self, parent):
         """创建快捷键设置区域"""
         shortcuts_frame = tb.LabelFrame(parent, text="快捷键设置", padding=15, bootstyle=INFO)
-        shortcuts_frame.pack(fill="x", padx=5, pady=5)
+        shortcuts_frame.pack(fill=X, padx=5, pady=5)
         shortcuts_frame.columnconfigure(1, weight=1)
 
-        tb.Label(shortcuts_frame, text="翻译:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
-        self.translate_shortcut = tb.Entry(shortcuts_frame, bootstyle=PRIMARY)
-        self.translate_shortcut.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+        tb.Label(shortcuts_frame, text="翻译:", font=('微软雅黑', 9)).grid(
+            row=0, column=0, sticky="w", padx=5, pady=2)
+        self.translate_shortcut = tb.Entry(shortcuts_frame, bootstyle=PRIMARY, font=('微软雅黑', 9))
+        self.translate_shortcut.grid(row=0, column=1, padx=5, pady=2, sticky="ew")
 
-        tb.Label(shortcuts_frame, text="清空:").grid(row=1, column=0, sticky="w", padx=5, pady=5)
-        self.clear_shortcut = tb.Entry(shortcuts_frame, bootstyle=PRIMARY)
-        self.clear_shortcut.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
+        tb.Label(shortcuts_frame, text="清空:", font=('微软雅黑', 9)).grid(
+            row=1, column=0, sticky="w", padx=5, pady=2)
+        self.clear_shortcut = tb.Entry(shortcuts_frame, bootstyle=PRIMARY, font=('微软雅黑', 9))
+        self.clear_shortcut.grid(row=1, column=1, padx=5, pady=2, sticky="ew")
 
-        tb.Label(shortcuts_frame, text="截图翻译:").grid(row=2, column=0, sticky="w", padx=5, pady=5)
-        self.capture_shortcut = tb.Entry(shortcuts_frame, bootstyle=PRIMARY)
-        self.capture_shortcut.grid(row=2, column=1, padx=5, pady=5, sticky="ew")
+        tb.Label(shortcuts_frame, text="截图翻译:", font=('微软雅黑', 9)).grid(
+            row=2, column=0, sticky="w", padx=5, pady=2)
+        self.capture_shortcut = tb.Entry(shortcuts_frame, bootstyle=PRIMARY, font=('微软雅黑', 9))
+        self.capture_shortcut.grid(row=2, column=1, padx=5, pady=2, sticky="ew")
 
     def _create_save_button(self, parent):
         """创建保存按钮"""
@@ -341,17 +344,22 @@ class AboutTabManager:
         
         tb.Label(github_frame, text="项目地址：", font=('微软雅黑', 10)).pack(side=LEFT)
         github_link = tb.Label(github_frame, text=version_info['github'], 
-                            font=('微软雅黑', 10, 'bold'), foreground='blue', cursor='hand2')
+                            font=('微软雅黑', 10, 'bold'),
+                            foreground='#4A90E2',
+                            cursor='hand2')
         github_link.pack(side=LEFT)
         github_link.bind("<Button-1>", lambda e: self._open_link(version_info['github']))
 
     def _create_features(self, parent, version_info):
         """创建功能说明"""
         feature_frame = tb.LabelFrame(parent, text="主要功能", padding=20, bootstyle=INFO)
-        feature_frame.pack(fill=X, pady=10)
+        feature_frame.pack(fill=X,pady=5)
 
-        for feature in version_info['features']:
-            tb.Label(feature_frame, text=feature, font=('微软雅黑', 10)).pack(anchor=W, pady=2)
+        # 功能列表
+
+        for i, feature in enumerate(version_info['features']):
+            tb.Label(feature_frame, text=feature, font=('微软雅黑', 9)).grid(
+                row=i//2, column=i%2, padx=5, pady=2, sticky='w')
 
     def _open_link(self, url):
         """打开链接"""
