@@ -6,32 +6,35 @@ import time
 import logging
 from collections import OrderedDict
 from urllib3.util.retry import Retry
-
+import threading
 class TranslationCache:
     """翻译结果缓存管理"""
-    def __init__(self, max_size=100, timeout=3600):
+    def __init__(self, max_size=1000, timeout=7200):
         self._cache = OrderedDict()
         self._cache_size = max_size
         self._cache_timeout = timeout
+        self._lock = threading.Lock()
 
     def get(self, key):
         """获取缓存"""
-        if key in self._cache:
-            cached_time, cached_result = self._cache[key]
-            if time.time() - cached_time < self._cache_timeout:
-                self._cache.move_to_end(key)
-                return cached_result
-            else:
-                del self._cache[key]
-        return None
+        with self._lock:
+            if key in self._cache:
+                cached_time, cached_result = self._cache[key]
+                if time.time() - cached_time < self._cache_timeout:
+                    self._cache.move_to_end(key)
+                    return cached_result
+                else:
+                    del self._cache[key]
+            return None
 
     def set(self, key, value):
         """设置缓存"""
-        current_time = time.time()
-        if len(self._cache) >= self._cache_size:
-            self._cache.popitem(last=False)
-        self._cache[key] = (current_time, value)
-        self._cache.move_to_end(key)
+        with self._lock:
+            current_time = time.time()
+            if len(self._cache) >= self._cache_size:
+                self._cache.popitem(last=False)
+            self._cache[key] = (current_time, value)
+            self._cache.move_to_end(key)
 
 class TextPreprocessor:
     """文本预处理工具"""
@@ -56,10 +59,14 @@ class BaiduTranslator:
     
     def _init_session(self):
         """初始化会话配置"""
-        retry_strategy = Retry(total=3, backoff_factor=0.5)
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=1,
+            status_forcelist=[500, 502, 503, 504]
+        )
         adapter = requests.adapters.HTTPAdapter(
-            pool_connections=20,
-            pool_maxsize=20,
+            pool_connections=30,  # 增加连接池大小
+            pool_maxsize=30,
             max_retries=retry_strategy
         )
         self.session.mount('http://', adapter)
@@ -68,6 +75,7 @@ class BaiduTranslator:
             'User-Agent': 'Mozilla/5.0',
             'Accept': 'application/json',
             'Accept-Language': 'en-US,en;q=0.9',
+            'Connection': 'keep-alive',  # 启用HTTP keep-alive
         })
 
     def translate(self, query, from_lang='auto', to_lang='zh'):

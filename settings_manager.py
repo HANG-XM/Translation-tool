@@ -13,6 +13,7 @@ class ConfigManager:
         self._config_lock = threading.Lock()
         self._config_cache = None
         self._config_cache_time = 0
+        self._config_cache_timeout = 10
         os.makedirs(os.path.dirname(self.config_file), exist_ok=True)
     
     def save_config(self, appid, appkey):
@@ -45,22 +46,23 @@ class ConfigManager:
         """加载配置"""
         current_time = time.time()
         if (self._config_cache is not None and 
-            current_time - self._config_cache_time < 5):
+            current_time - self._config_cache_time < self._config_cache_timeout):
             return self._config_cache
             
         if not os.path.exists(self.config_file):
             return None, None
+
+        with self._config_lock:
+            config = configparser.ConfigParser()
+            config.read(self.config_file, encoding='utf-8')
             
-        config = configparser.ConfigParser()
-        config.read(self.config_file, encoding='utf-8')
-        
-        if 'BaiduAPI' in config:
-            appid = config['BaiduAPI'].get('appid', '')
-            appkey = config['BaiduAPI'].get('appkey', '')
-            self._update_cache(appid, appkey)
-            return appid, appkey
-        
-        return None, None
+            if 'BaiduAPI' in config:
+                appid = config['BaiduAPI'].get('appid', '')
+                appkey = config['BaiduAPI'].get('appkey', '')
+                self._update_cache(appid, appkey)
+                return appid, appkey
+            
+            return None, None
     
     def save_shortcuts(self, shortcuts):
         """保存快捷键配置"""

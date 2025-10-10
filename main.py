@@ -8,7 +8,7 @@ import time
 from settings_manager import SettingsManager
 from ui_manager import UIManager
 import sys
-
+import logging.handlers
 def get_base_path():
     """获取程序运行的基础路径"""
     if getattr(sys, 'frozen', False):
@@ -27,7 +27,6 @@ def get_resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 def setup_logging():
-    """设置日志记录"""
     base_path = get_base_path()
     log_dir = os.path.join(base_path, 'log')
     
@@ -41,7 +40,13 @@ def setup_logging():
         datefmt='%Y-%m-%d %H:%M:%S'
     )
     
-    file_handler = logging.FileHandler(log_file, encoding='utf-8')
+    # 使用RotatingFileHandler进行日志轮转
+    file_handler = logging.handlers.RotatingFileHandler(
+        log_file,
+        maxBytes=10*1024*1024,  # 10MB
+        backupCount=5,
+        encoding='utf-8'
+    )
     file_handler.setFormatter(formatter)
     file_handler.setLevel(logging.INFO)
     
@@ -53,7 +58,6 @@ def setup_logging():
     logger.setLevel(logging.INFO)
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
-
 def check_directories():
     """检查并创建必要的目录"""
     try:

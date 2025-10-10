@@ -9,6 +9,7 @@ import os
 import time
 from translator import BaiduTranslator
 import tkinter as tk
+import queue
 
 class TitleBarManager:
     def __init__(self, root):
@@ -371,8 +372,11 @@ class UIManager:
         self.root = root
         self.settings_manager = settings_manager
         self._translate_lock = threading.Lock()
-        self.thread_pool = ThreadPoolExecutor(max_workers=3)
-        
+        self.thread_pool = ThreadPoolExecutor(
+            max_workers=5,                                 
+            thread_name_prefix="translate_worker"
+        )
+        self._task_queue = queue.Queue()
         # 初始化管理器
         self.title_bar_manager = TitleBarManager(root)
         self.translate_tab_manager = None
