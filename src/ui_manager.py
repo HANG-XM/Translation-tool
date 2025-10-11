@@ -7,7 +7,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 import os
 import time
-from translator import BaiduTranslator
+from src.translator import BaiduTranslator
 import tkinter as tk
 import queue
 
