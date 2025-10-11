@@ -1,5 +1,5 @@
 VERSION_INFO = {
-    "version": "1.1.0",
+    "version": "1.2.0",
     "author": "HANG-XM",
     "github": "https://github.com/HANG-XM/Translation-tool",
     "features": [
