@@ -29,59 +29,68 @@ class TitleBarManager:
         content_frame.pack(fill="x", padx=10)
         
         # 创建标题和控制按钮
-        title_frame = tb.Frame(content_frame, bootstyle=PRIMARY)
-        title_frame.pack(side="left")
-        control_frame = tb.Frame(content_frame, bootstyle=PRIMARY)
-        control_frame.pack(side="right")
-
-        # 添加标题和控制按钮组件
-        title_label = tb.Label(title_frame, text="翻译工具", 
+        title_label = tb.Label(content_frame, text="翻译工具", 
                             font=('微软雅黑', 10, 'bold'),
                             bootstyle="primary-inverse.TLabel")
         title_label.pack(side="left", padx=5)
-
-        min_btn = tb.Button(control_frame, text="─", width=3,
+        
+        # 创建按钮容器
+        button_frame = tb.Frame(content_frame, bootstyle=PRIMARY)
+        button_frame.pack(side="right", fill="y")
+        
+        # 添加控制按钮
+        min_btn = tb.Button(button_frame, text="─", width=3,
                         bootstyle="primary.TButton",
                         command=self.root.iconify)
-        min_btn.pack(side="left", padx=2)
+        min_btn.pack(side="left")
         
-        self.max_btn = tb.Button(control_frame, text="□", width=3,
+        self.max_btn = tb.Button(button_frame, text="□", width=3,
                             bootstyle="primary.TButton",
                             command=self.toggle_maximize)
-        self.max_btn.pack(side="left", padx=2)
+        self.max_btn.pack(side="left")
         
-        close_btn = tb.Button(control_frame, text="✕", width=3,
+        close_btn = tb.Button(button_frame, text="✕", width=3,
                             bootstyle="danger.TButton",
                             command=self.root.quit)
-        close_btn.pack(side="left", padx=2)
+        close_btn.pack(side="left")
 
         # 绑定拖动事件到整个标题栏
         self.title_bar.bind('<Button-1>', self.start_move)
         self.title_bar.bind('<B1-Motion>', self.on_move)
         content_frame.bind('<Button-1>', self.start_move)
         content_frame.bind('<B1-Motion>', self.on_move)
-        title_frame.bind('<Button-1>', self.start_move)
-        title_frame.bind('<B1-Motion>', self.on_move)
         title_label.bind('<Button-1>', self.start_move)
         title_label.bind('<B1-Motion>', self.on_move)
 
     def update_style(self, theme):
         """更新标题栏样式"""
-        if theme == '黑夜':
-            self.title_bar.configure(bootstyle='dark')
-            self.max_btn.configure(bootstyle='dark.TButton')
-            min_btn = self.title_bar.winfo_children()[1].winfo_children()[0]
-            min_btn.configure(bootstyle='dark.TButton')
-            close_btn = self.title_bar.winfo_children()[1].winfo_children()[2]
-            close_btn.configure(bootstyle='danger.TButton')
-        else:
-            self.title_bar.configure(bootstyle='primary')
-            self.max_btn.configure(bootstyle='primary.TButton')
-            min_btn = self.title_bar.winfo_children()[1].winfo_children()[0]
-            min_btn.configure(bootstyle='primary.TButton')
-            close_btn = self.title_bar.winfo_children()[1].winfo_children()[2]
-            close_btn.configure(bootstyle='danger.TButton')
-
+        try:
+            if theme == '黑夜':
+                self.title_bar.configure(bootstyle='dark')
+                self.max_btn.configure(bootstyle='dark.TButton')
+                # 安全地获取并更新按钮样式
+                for child in self.title_bar.winfo_children():
+                    if isinstance(child, tb.Frame):
+                        for btn in child.winfo_children():
+                            if isinstance(btn, tb.Button):
+                                if btn.cget('text') == '─':  # 最小化按钮
+                                    btn.configure(bootstyle='dark.TButton')
+                                elif btn.cget('text') == '✕':  # 关闭按钮
+                                    btn.configure(bootstyle='danger.TButton')
+            else:
+                self.title_bar.configure(bootstyle='primary')
+                self.max_btn.configure(bootstyle='primary.TButton')
+                # 安全地获取并更新按钮样式
+                for child in self.title_bar.winfo_children():
+                    if isinstance(child, tb.Frame):
+                        for btn in child.winfo_children():
+                            if isinstance(btn, tb.Button):
+                                if btn.cget('text') == '─':  # 最小化按钮
+                                    btn.configure(bootstyle='primary.TButton')
+                                elif btn.cget('text') == '✕':  # 清空按钮
+                                    btn.configure(bootstyle='danger.TButton')
+        except Exception as e:
+            logging.error(f"更新标题栏样式失败: {str(e)}")
     def start_move(self, event):
         """开始移动窗口"""
         self.x = event.x
@@ -996,11 +1005,12 @@ class HistoryTabManager:
                 search_text in item['target_text'].lower()):
                 self.history_list.insert('', 'end', values=(
                     item['time'],
-                    item['source_text'][:50] + '...' if len(item['source_text']) > 50 else item['source_text'],
-                    item['target_text'][:50] + '...' if len(item['target_text']) > 50 else item['target_text'],
+                    item['source_text'],
+                    item['target_text'],
                     item['from_lang'],
                     item['to_lang']
                 ))
+
 
     def load_history(self):
         """加载历史记录"""
@@ -1009,8 +1019,8 @@ class HistoryTabManager:
         for item in history.values():
             self.history_list.insert('', 'end', values=(
                 item['time'],
-                item['source_text'][:50] + '...' if len(item['source_text']) > 50 else item['source_text'],
-                item['target_text'][:50] + '...' if len(item['target_text']) > 50 else item['target_text'],
+                item['source_text'],
+                item['target_text'],
                 item['from_lang'],
                 item['to_lang']
             ))
