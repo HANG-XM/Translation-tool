@@ -7,6 +7,7 @@ import logging
 from collections import OrderedDict
 from urllib3.util.retry import Retry
 import threading
+
 class TranslationCache:
     """翻译结果缓存管理"""
     def __init__(self, max_size=1000, timeout=7200):
@@ -14,6 +15,8 @@ class TranslationCache:
         self._cache_size = max_size
         self._cache_timeout = timeout
         self._lock = threading.Lock()
+        self._history = OrderedDict()
+        self._max_history = 100
 
     def get(self, key):
         """获取缓存"""
@@ -35,6 +38,33 @@ class TranslationCache:
                 self._cache.popitem(last=False)
             self._cache[key] = (current_time, value)
             self._cache.move_to_end(key)
+
+    def add_to_history(self, source_text, target_text, from_lang, to_lang):
+        """添加翻译记录到历史"""
+        with self._lock:
+            current_time = time.strftime('%Y-%m-%d %H:%M:%S')
+            history_key = f"{current_time}_{hash(source_text)}"
+            
+            self._history[history_key] = {
+                'source_text': source_text,
+                'target_text': target_text,
+                'from_lang': from_lang,
+                'to_lang': to_lang,
+                'time': current_time
+            }
+            
+            if len(self._history) > self._max_history:
+                self._history.popitem(last=False)
+
+    def get_history(self):
+        """获取翻译历史"""
+        with self._lock:
+            return list(self._history.values())
+
+    def clear_history(self):
+        """清空翻译历史"""
+        with self._lock:
+            self._history.clear()
 
 class TextPreprocessor:
     """文本预处理工具"""

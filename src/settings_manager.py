@@ -5,6 +5,7 @@ import logging
 import time
 from ttkbootstrap.dialogs import Messagebox
 import ttkbootstrap as tb
+import json
 
 class ConfigManager:
     """配置文件管理"""
@@ -145,6 +146,9 @@ class SettingsManager:
         self.root = root
         self.config_manager = ConfigManager(config_file)
         self.theme_manager = ThemeManager(root)
+        # 添加历史记录文件路径
+        base_path = os.path.dirname(config_file)
+        self.history_file = os.path.join(base_path, 'history.json')
     
     def save_config(self, appid, appkey):
         """保存配置"""
@@ -265,3 +269,35 @@ class SettingsManager:
         except Exception as e:
             logging.error(f"加载语言设置失败: {str(e)}")
             return '自动检测', '英语'
+
+    def save_translation_history(self, history):
+        """保存翻译历史记录到独立文件"""
+        try:
+            # 确保目录存在
+            os.makedirs(os.path.dirname(self.history_file), exist_ok=True)
+            
+            # 使用临时文件确保数据完整性
+            temp_file = self.history_file + '.tmp'
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                json.dump(history, f, ensure_ascii=False, indent=2)
+            
+            # 原子性替换文件
+            os.replace(temp_file, self.history_file)
+            return True
+        except Exception as e:
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
+            logging.error(f"保存翻译历史失败: {str(e)}")
+            raise e
+
+    def load_translation_history(self):
+        """从独立文件加载翻译历史记录"""
+        try:
+            if not os.path.exists(self.history_file):
+                return {}
+            
+            with open(self.history_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            logging.error(f"加载翻译历史失败: {str(e)}")
+            return {}
