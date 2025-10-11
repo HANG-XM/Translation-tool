@@ -5,8 +5,8 @@ import logging
 import configparser
 from datetime import datetime
 import time
-from src.settings_manager import SettingsManager
-from src.ui_manager import UIManager
+from settings_manager import SettingsManager
+from ui_manager import UIManager
 import sys
 import logging.handlers
 def get_base_path():

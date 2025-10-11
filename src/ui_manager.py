@@ -7,10 +7,10 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 import os
 import time
-from src.translator import BaiduTranslator
+from translator import BaiduTranslator
 import tkinter as tk
 import queue
-
+import pyautogui
 class TitleBarManager:
     def __init__(self, root):
         self.root = root
@@ -630,10 +630,13 @@ class UIManager:
             if not hasattr(self, 'translator') or not self.translator:
                 Messagebox.show_error("错误", "请先保存配置")
                 return
-            self._minimize_and_capture()
+            self.root.withdraw()
+            time.sleep(0.5)
+            screenshot = pyautogui.screenshot()
+            self._create_selection_window(screenshot)
         except Exception as e:
             logging.error(f"截图翻译失败: {str(e)}")
-            Messagebox.showerror("错误", f"截图翻译失败: {str(e)}")
+            Messagebox.show_error("错误", f"截图翻译失败: {str(e)}")
             self.root.deiconify()
 
     def _minimize_and_capture(self):
@@ -739,8 +742,6 @@ class UIManager:
         import pytesseract
         from PIL import Image
         
-        self.root.deiconify()
-        
         try:
             text = pytesseract.image_to_string(Image.open(temp_image), lang='chi_sim+eng')
             
@@ -752,11 +753,16 @@ class UIManager:
                 self.translate()
             else:
                 Messagebox.show_warning("提示", "未能识别到文本")
+        except Exception as e:
+            logging.error(f"OCR处理失败: {str(e)}")
+            Messagebox.show_error("错误", f"OCR处理失败: {str(e)}")
         finally:
             try:
                 os.remove(temp_image)
             except:
                 pass
+            # 确保窗口恢复显示
+            self.root.deiconify()
 
     def _add_selection_hints(self, selector):
         """添加选择提示"""
