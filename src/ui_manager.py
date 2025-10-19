@@ -771,7 +771,34 @@ class UIManager:
         except Exception as e:
             logging.error(f"加载配置失败: {str(e)}")
             Messagebox.show_error("错误", f"加载配置失败: {str(e)}")
+    def _load_remaining_configs(self):
+        """加载剩余配置"""
+        try:
+            # 加载快捷键配置
+            if self.config_tab_manager:
+                self.config_tab_manager.load_shortcuts()
+            
+            # 加载主题配置
+            theme = self.settings_manager.load_theme()
+            if self.config_tab_manager:
+                self.config_tab_manager.theme_var.set(theme)
+            self.settings_manager.set_theme(theme)
+            
+            # 加载语言配置
+            source_lang, target_lang = self.settings_manager.load_languages()
+            if self.translate_tab_manager:
+                self.translate_tab_manager.source_lang.set(source_lang)
+                self.translate_tab_manager.target_lang.set(target_lang)
 
+            # 加载历史记录到缓存
+            if self.translator:
+                history = self.settings_manager.load_translation_history()
+                self.translator.cache._history = OrderedDict(history)
+
+            logging.info("配置加载完成")
+        except Exception as e:
+            logging.error(f"加载剩余配置失败: {str(e)}")
+            Messagebox.show_error("错误", f"加载配置失败: {str(e)}")
     def translate(self):
         """执行翻译操作"""
         try:
