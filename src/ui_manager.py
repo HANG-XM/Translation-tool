@@ -628,14 +628,14 @@ class UIManager:
             main_container.pack(fill=BOTH, expand=True)
 
             # 添加内边距到notebook
-            self.notebook = tb.Notebook(main_container, bootstyle=INFO)  # 改为实例变量
+            self.notebook = tb.Notebook(main_container, bootstyle=INFO)
             self.notebook.pack(padx=20, pady=20, fill=BOTH, expand=True)
             
             # 确保标题栏和主内容区域之间没有间隙
             self.root.configure(bg=self.root.style.lookup('TFrame', 'background'))
             
             # 先创建翻译标签页
-            self.translate_tab_manager = TranslateTabManager(self.notebook, self.settings_manager)  # 使用实例变量
+            self.translate_tab_manager = TranslateTabManager(self.notebook, self.settings_manager)
             self.translate_tab_manager.setup()
             
             # 延迟加载其他标签页

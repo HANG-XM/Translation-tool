@@ -85,21 +85,29 @@ class TranslatorApp:
         self.config_file = os.path.join(base_path, 'data', 'config.ini')
         self.settings_manager = SettingsManager(self.root, self.config_file)
         
-        # 先显示窗口，再进行其他初始化
-        self.root.update()
+        # 先隐藏窗口，完成初始化后再显示
+        self.root.withdraw()
         self.ui_manager = UIManager(self.root, self.settings_manager)
         
-        # 等待UI完全初始化后再加载配置
-        self.root.after(200, self._load_config)
+        # 等待UI完全初始化后再显示窗口
+        self.root.after(100, self._show_window)
         
+    def _show_window(self):
+        """显示窗口"""
+        try:
+            self.root.deiconify()
+            # 确保UI组件已初始化
+            if not self.ui_manager.config_tab_manager:
+                self.root.after(100, self._show_window)  # 延迟重试
+                return
+            # 加载配置
+            self._load_config()
+        except Exception as e:
+            logging.error(f"显示窗口失败: {str(e)}")
+            
     def _load_config(self):
         """加载配置"""
         try:
-            # 确保UI组件已初始化
-            if not self.ui_manager.config_tab_manager:
-                self.root.after(100, self._load_config)  # 延迟重试
-                return
-                
             # 在主线程中加载配置
             appid, appkey = self.settings_manager.load_config()
             shortcuts = self.settings_manager.load_shortcuts()
