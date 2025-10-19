@@ -8,6 +8,8 @@ from collections import OrderedDict
 from urllib3.util.retry import Retry
 import threading
 import pyttsx3
+import asyncio
+from functools import lru_cache
 
 class TranslationCache:
     """翻译结果缓存管理"""
@@ -18,7 +20,9 @@ class TranslationCache:
         self._lock = threading.Lock()
         self._history = OrderedDict()
         self._max_history = 100
-
+        self._save_callback = None
+        
+    @lru_cache(maxsize=128)
     def get(self, key):
         """获取缓存"""
         with self._lock:
@@ -30,6 +34,7 @@ class TranslationCache:
                 else:
                     del self._cache[key]
             return None
+
 
     def set(self, key, value):
         """设置缓存"""

@@ -10,6 +10,8 @@ from settings_manager import SettingsManager
 from ui_manager import UIManager
 import sys
 import logging.handlers
+import concurrent.futures
+from functools import lru_cache
 def get_base_path():
     """获取程序运行的基础路径"""
     if getattr(sys, 'frozen', False):
@@ -85,12 +87,31 @@ class TranslatorApp:
         self.config_file = os.path.join(base_path, 'data', 'config.ini')
         self.settings_manager = SettingsManager(self.root, self.config_file)
         
+        # 使用线程池异步初始化
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+        
         # 先隐藏窗口，完成初始化后再显示
         self.root.withdraw()
         self.ui_manager = UIManager(self.root, self.settings_manager)
         
+        # 异步加载配置
+        self.executor.submit(self._async_load_config)
+        
         # 等待UI完全初始化后再显示窗口
         self.root.after(100, self._show_window)
+    def _async_load_config(self):
+        """异步加载配置"""
+        try:
+            # 在后台线程中加载配置
+            appid, appkey = self.settings_manager.load_config()
+            shortcuts = self.settings_manager.load_shortcuts()
+            theme = self.settings_manager.load_theme()
+            source_lang, target_lang = self.settings_manager.load_languages()
+            
+            # 在主线程中应用配置
+            self.root.after(0, self._apply_config, appid, appkey, shortcuts, theme, source_lang, target_lang)
+        except Exception as e:
+            logging.error(f"异步加载配置失败: {str(e)}")
         
     def _show_window(self):
         """显示窗口"""

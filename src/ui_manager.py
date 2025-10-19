@@ -2,7 +2,6 @@ import ttkbootstrap as tb
 from ttkbootstrap.constants import *
 from ttkbootstrap.scrolled import ScrolledText
 from ttkbootstrap.dialogs import Messagebox
-
 import threading
 import logging
 from concurrent.futures import ThreadPoolExecutor
@@ -12,7 +11,9 @@ from translator import BaiduTranslator
 import tkinter as tk
 import queue
 import pyautogui
-from collections import OrderedDict  # 添加这行导入
+from collections import OrderedDict
+import weakref
+from functools import lru_cache
 class TitleBarManager:
     def __init__(self, root):
         self.root = root

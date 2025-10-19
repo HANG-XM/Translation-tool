@@ -6,6 +6,9 @@ import time
 from ttkbootstrap.dialogs import Messagebox
 import ttkbootstrap as tb
 import json
+import weakref
+from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
 
 class ConfigManager:
     """配置文件管理"""
@@ -15,7 +18,37 @@ class ConfigManager:
         self._config_cache = None
         self._config_cache_time = 0
         self._config_cache_timeout = 10
+        self._executor = ThreadPoolExecutor(max_workers=2)
         os.makedirs(os.path.dirname(self.config_file), exist_ok=True)
+        
+    @lru_cache(maxsize=32)
+    def load_config(self):
+        """加载配置"""
+        current_time = time.time()
+        if (self._config_cache is not None and 
+            current_time - self._config_cache_time < self._config_cache_timeout):
+            return self._config_cache
+            
+        if not os.path.exists(self.config_file):
+            return None, None
+
+        try:
+            with self._config_lock:
+                config = configparser.ConfigParser()
+                # 使用线程安全的读取方式
+                with open(self.config_file, 'r', encoding='utf-8') as f:
+                    config.read_file(f)
+                
+                if 'BaiduAPI' in config:
+                    appid = config['BaiduAPI'].get('appid', '')
+                    appkey = config['BaiduAPI'].get('appkey', '')
+                    self._update_cache(appid, appkey)
+                    return appid, appkey
+                
+                return None, None
+        except Exception as e:
+            logging.error(f"加载配置失败: {str(e)}")
+            return None, None
     
     def save_config(self, appid, appkey):
         """保存配置"""
