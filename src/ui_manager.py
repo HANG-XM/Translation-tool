@@ -213,9 +213,15 @@ class TranslateTabManager:
                             bootstyle=INFO, width=10)
         self.capture_btn.grid(row=0, column=2, padx=6, pady=2, sticky="ew")
 
+        # 添加朗读按钮
+        self.speak_btn = tb.Button(button_grid, text="🔊 朗读",
+                            bootstyle=SUCCESS, width=10)
+        self.speak_btn.grid(row=0, column=3, padx=6, pady=2, sticky="ew")
+
         button_grid.columnconfigure(0, weight=1)
         button_grid.columnconfigure(1, weight=1)
         button_grid.columnconfigure(2, weight=1)
+        button_grid.columnconfigure(3, weight=1)
 
 class ConfigTabManager:
     def __init__(self, notebook, settings_manager):
@@ -655,6 +661,7 @@ class UIManager:
         self.translate_tab_manager.translate_btn.configure(command=self.translate)
         self.translate_tab_manager.clear_btn.configure(command=self.clear_text)
         self.translate_tab_manager.capture_btn.configure(command=self.capture_translate)
+        self.translate_tab_manager.speak_btn.configure(command=self.speak_text)  # 添加朗读按钮事件
         self.config_tab_manager.save_btn.configure(command=self.save_config)
 
         # 绑定快捷键
@@ -1038,3 +1045,32 @@ class UIManager:
         """取消选择"""
         selector.destroy()
         self.root.deiconify()
+    def speak_text(self):
+        """朗读翻译结果"""
+        try:
+            if not hasattr(self, 'translator') or not self.translator:
+                Messagebox.show_error("错误", "请先保存配置")
+                return
+                
+            text = self.translate_tab_manager.target_text.get("1.0", "end").strip()
+            if not text:
+                Messagebox.show_warning("警告", "没有可朗读的文本")
+                return
+                
+            # 获取目标语言
+            lang_map = {
+                '中文': 'zh',
+                '英语': 'en',
+                '日语': 'ja',
+                '韩语': 'ko',
+                '法语': 'fr',
+                '德语': 'de',
+                '俄语': 'ru',
+                '西班牙语': 'es'
+            }
+            target_lang = lang_map.get(self.translate_tab_manager.target_lang.get(), 'zh')
+            
+            self.translator.speak(text, target_lang)
+        except Exception as e:
+            logging.error(f"朗读失败: {str(e)}")
+            Messagebox.show_error("错误", f"朗读失败: {str(e)}")

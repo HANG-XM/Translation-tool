@@ -7,6 +7,7 @@ import logging
 from collections import OrderedDict
 from urllib3.util.retry import Retry
 import threading
+import pyttsx3
 
 class TranslationCache:
     """翻译结果缓存管理"""
@@ -103,8 +104,10 @@ class BaiduTranslator:
         self.timeout = 10
         self.cache = TranslationCache()
         self.preprocessor = TextPreprocessor()
+        self.tts_engine = pyttsx3.init()  # 初始化语音引擎
         
         self._init_session()
+        self._init_tts()  # 初始化语音设置
     
     def _init_session(self):
         """初始化会话配置"""
@@ -176,3 +179,45 @@ class BaiduTranslator:
             
         except Exception as e:
             return f"翻译失败: {str(e)}"
+    def _init_tts(self):
+        """初始化语音合成设置"""
+        try:
+            voices = self.tts_engine.getProperty('voices')
+            # 设置默认语音
+            self.tts_engine.setProperty('voice', voices[1].id if len(voices) > 1 else voices[0].id)
+            # 设置语速
+            self.tts_engine.setProperty('rate', 150)
+        except Exception as e:
+            logging.error(f"初始化语音合成失败: {str(e)}")
+
+    def speak(self, text, lang='zh'):
+        """朗读文本"""
+        try:
+            if not text.strip():
+                return
+                
+            # 根据语言选择语音
+            voices = self.tts_engine.getProperty('voices')
+            if lang == 'en':
+                for voice in voices:
+                    if 'english' in voice.name.lower():
+                        self.tts_engine.setProperty('voice', voice.id)
+                        break
+            else:
+                for voice in voices:
+                    if 'chinese' in voice.name.lower():
+                        self.tts_engine.setProperty('voice', voice.id)
+                        break
+            
+            # 在新线程中执行朗读，避免阻塞UI
+            threading.Thread(target=self._speak_thread, args=(text,), daemon=True).start()
+        except Exception as e:
+            logging.error(f"语音朗读失败: {str(e)}")
+
+    def _speak_thread(self, text):
+        """语音朗读线程"""
+        try:
+            self.tts_engine.say(text)
+            self.tts_engine.runAndWait()
+        except Exception as e:
+            logging.error(f"语音朗读线程执行失败: {str(e)}")
