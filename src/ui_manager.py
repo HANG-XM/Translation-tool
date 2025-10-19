@@ -659,10 +659,11 @@ class UIManager:
             # 绑定事件
             self._bind_events()
             
-            # 标签页加载完成后，再加载配置
-            self.root.after(100, self.load_config)
+            # 通知主应用配置标签页已准备就绪
+            self.root.event_generate('<<ConfigTabReady>>')
         except Exception as e:
             logging.error(f"加载其他标签页失败: {str(e)}")
+
     def _bind_events(self):
         """绑定事件"""
         # 绑定主题切换事件

@@ -89,20 +89,27 @@ class TranslatorApp:
         self.root.update()
         self.ui_manager = UIManager(self.root, self.settings_manager)
         
-        # 使用线程加载配置，但将UI操作放回主线程
-        threading.Thread(target=self._load_config, daemon=True).start()
+        # 等待UI完全初始化后再加载配置
+        self.root.after(200, self._load_config)
         
     def _load_config(self):
-        """在线程中加载配置"""
+        """加载配置"""
         try:
-            # 在后台线程中加载非UI配置
+            # 确保UI组件已初始化
+            if not self.ui_manager.config_tab_manager:
+                self.root.after(100, self._load_config)  # 延迟重试
+                return
+                
+            # 在主线程中加载配置
             appid, appkey = self.settings_manager.load_config()
             shortcuts = self.settings_manager.load_shortcuts()
             theme = self.settings_manager.load_theme()
             source_lang, target_lang = self.settings_manager.load_languages()
             
-            # 将UI操作放回主线程执行
-            self.root.after(0, lambda: self._apply_config(appid, appkey, shortcuts, theme, source_lang, target_lang))
+            # 应用配置
+            self.settings_manager.set_theme(theme)
+            self.ui_manager.load_config()
+            self.ui_manager.bind_shortcuts()
         except Exception as e:
             logging.error(f"加载配置失败: {str(e)}")
             
