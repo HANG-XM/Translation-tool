@@ -65,7 +65,26 @@ class TranslationCache:
         """清空翻译历史"""
         with self._lock:
             self._history.clear()
-
+    def add_to_history(self, source_text, target_text, from_lang, to_lang, save_callback=None):
+        """添加翻译记录到历史"""
+        with self._lock:
+            current_time = time.strftime('%Y-%m-%d %H:%M:%S')
+            history_key = f"{current_time}_{hash(source_text)}"
+            
+            self._history[history_key] = {
+                'source_text': source_text,
+                'target_text': target_text,
+                'from_lang': from_lang,
+                'to_lang': to_lang,
+                'time': current_time
+            }
+            
+            if len(self._history) > self._max_history:
+                self._history.popitem(last=False)
+                
+            # 立即保存到文件
+            if save_callback:
+                save_callback(self._history)
 class TextPreprocessor:
     """文本预处理工具"""
     @staticmethod

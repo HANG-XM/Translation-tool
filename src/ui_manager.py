@@ -2,6 +2,7 @@ import ttkbootstrap as tb
 from ttkbootstrap.constants import *
 from ttkbootstrap.scrolled import ScrolledText
 from ttkbootstrap.dialogs import Messagebox
+
 import threading
 import logging
 from concurrent.futures import ThreadPoolExecutor
@@ -11,6 +12,7 @@ from translator import BaiduTranslator
 import tkinter as tk
 import queue
 import pyautogui
+from collections import OrderedDict  # 添加这行导入
 class TitleBarManager:
     def __init__(self, root):
         self.root = root
@@ -91,6 +93,7 @@ class TitleBarManager:
                                     btn.configure(bootstyle='danger.TButton')
         except Exception as e:
             logging.error(f"更新标题栏样式失败: {str(e)}")
+
     def start_move(self, event):
         """开始移动窗口"""
         self.x = event.x
@@ -231,7 +234,7 @@ class ConfigTabManager:
         self.notebook.add(config_frame, text="⚙️ 配置")
 
         main_container = tb.Frame(config_frame)
-        main_container.pack(padx=20, pady=10, fill=BOTH, expand=True)  # 减少垂直内边距
+        main_container.pack(padx=20, pady=10, fill=BOTH, expand=True)
         main_container.columnconfigure(0, weight=1)
 
         left_panel = tb.Frame(main_container)
@@ -258,7 +261,6 @@ class ConfigTabManager:
         self.theme_combo['values'] = ('白天', '黑夜')
         self.theme_combo.set('白天')
         self.theme_combo.grid(row=0, column=1, padx=5, pady=5, sticky="w")
-
 
     def _create_api_settings(self, parent):
         """创建API设置区域"""
@@ -300,6 +302,7 @@ class ConfigTabManager:
         self.save_btn = tb.Button(parent, text="💾 保存配置", 
                                 bootstyle=SUCCESS, width=15)
         self.save_btn.pack(pady=10)
+
     def load_shortcuts(self):
         """加载快捷键配置"""
         shortcuts = self.settings_manager.load_shortcuts()
@@ -371,10 +374,9 @@ class AboutTabManager:
     def _create_features(self, parent, version_info):
         """创建功能说明"""
         feature_frame = tb.LabelFrame(parent, text="主要功能", padding=20, bootstyle=INFO)
-        feature_frame.pack(fill=X,pady=5)
+        feature_frame.pack(fill=X, pady=5)
 
         # 功能列表
-
         for i, feature in enumerate(version_info['features']):
             tb.Label(feature_frame, text=feature, font=('微软雅黑', 9)).grid(
                 row=i//2, column=i%2, padx=5, pady=2, sticky='w')
@@ -383,6 +385,208 @@ class AboutTabManager:
         """打开链接"""
         import webbrowser
         webbrowser.open(url)
+
+class HistoryTabManager:
+    def __init__(self, notebook, settings_manager):
+        self.notebook = notebook
+        self.settings_manager = settings_manager
+        self.history_list = None
+        self.clear_btn = None
+        self.search_var = None
+        self.search_entry = None
+        
+    def setup(self):
+        """设置历史记录标签页"""
+        history_frame = tb.Frame(self.notebook)
+        self.notebook.add(history_frame, text="📜 历史记录")
+        history_frame.pack_propagate(False)
+        history_frame.rowconfigure(1, weight=1)
+        history_frame.columnconfigure(0, weight=1)
+
+        # 创建工具栏
+        toolbar = tb.Frame(history_frame)
+        toolbar.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 5))
+
+        # 搜索框区域
+        search_container = tb.Frame(toolbar)
+        search_container.pack(side="left", fill="x", expand=True, padx=(0, 10))
+        
+        tb.Label(search_container, text="搜索:", bootstyle=INFO).pack(side="left", padx=(0, 5))
+        self.search_var = tb.StringVar()
+        self.search_var.trace('w', self._on_search)
+        self.search_entry = tb.Entry(search_container, textvariable=self.search_var, bootstyle=PRIMARY)
+        self.search_entry.pack(side="left", fill="x", expand=True)
+
+        # 操作按钮容器
+        button_container = tb.Frame(toolbar)
+        button_container.pack(side="right")
+        
+        self.clear_btn = tb.Button(button_container, text="清空历史", 
+                                bootstyle=DANGER,
+                                command=self.clear_history)
+        self.clear_btn.pack(padx=5, pady=5)
+
+        # 创建历史记录列表容器
+        list_container = tb.Frame(history_frame)
+        list_container.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
+        list_container.rowconfigure(0, weight=1)
+        list_container.columnconfigure(0, weight=1)
+
+        # 创建历史记录列表
+        self.history_list = tb.Treeview(list_container, 
+                                      columns=('time', 'source', 'target', 'from_lang', 'to_lang'),
+                                      show='headings')
+        
+        # 设置列标题和宽度
+        self.history_list.heading('time', text='时间')
+        self.history_list.heading('source', text='原文')
+        self.history_list.heading('target', text='译文')
+        self.history_list.heading('from_lang', text='源语言')
+        self.history_list.heading('to_lang', text='目标语言')
+        
+        # 设置列宽，使用相对宽度
+        self.history_list.column('time', width=120, minwidth=100)
+        self.history_list.column('source', width=200, minwidth=150)
+        self.history_list.column('target', width=200, minwidth=150)
+        self.history_list.column('from_lang', width=80, minwidth=60)
+        self.history_list.column('to_lang', width=80, minwidth=60)
+        
+        # 添加滚动条
+        v_scrollbar = tb.Scrollbar(list_container, orient=VERTICAL, command=self.history_list.yview)
+        h_scrollbar = tb.Scrollbar(list_container, orient=HORIZONTAL, command=self.history_list.xview)
+        self.history_list.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
+        
+        # 布局滚动条和列表
+        self.history_list.grid(row=0, column=0, sticky="nsew")
+        v_scrollbar.grid(row=0, column=1, sticky="ns")
+        h_scrollbar.grid(row=1, column=0, sticky="ew")
+        
+        # 绑定双击事件
+        self.history_list.bind('<Double-Button-1>', self._show_details)
+        
+        self.load_history()
+
+    def _show_details(self, event):
+        """显示详细信息"""
+        selection = self.history_list.selection()
+        if not selection:
+            return
+                
+        item = self.history_list.item(selection[0])
+        values = item['values']
+        
+        # 创建详情窗口
+        detail_window = tb.Toplevel(self.notebook)
+        detail_window.title("翻译详情")
+        detail_window.geometry("800x600")
+        detail_window.transient(self.notebook)
+        detail_window.grab_set()
+        
+        # 创建主容器
+        main_container = tb.Frame(detail_window)
+        main_container.pack(fill=BOTH, expand=True, padx=20, pady=20)
+        main_container.rowconfigure(1, weight=1)
+        main_container.columnconfigure(0, weight=1)
+
+        # 信息栏
+        info_frame = tb.Frame(main_container)
+        info_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+        
+        # 时间标签
+        tb.Label(info_frame, text=f"翻译时间: {values[0]}", 
+                font=('微软雅黑', 10, 'bold')).pack(side="left", padx=(0, 20))
+        
+        # 语言标签
+        tb.Label(info_frame, text=f"翻译: {values[3]} → {values[4]}", 
+                font=('微软雅黑', 10)).pack(side="left")
+
+        # 文本区域容器
+        text_container = tb.Frame(main_container)
+        text_container.grid(row=1, column=0, sticky="nsew")
+        text_container.rowconfigure(0, weight=1)
+        text_container.rowconfigure(1, weight=1)
+        text_container.columnconfigure(0, weight=1)
+        text_container.columnconfigure(1, weight=1)
+
+        # 原文区域
+        source_frame = tb.LabelFrame(text_container, text="原文", padding=10)
+        source_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
+        
+        source_text = ScrolledText(source_frame, wrap="word", font=('微软雅黑', 10))
+        source_text.pack(fill=BOTH, expand=True)
+        source_text.text.insert('1.0', values[1])
+        source_text.text.configure(state='disabled')
+
+        # 译文区域
+        target_frame = tb.LabelFrame(text_container, text="译文", padding=10)
+        target_frame.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
+        
+        target_text = ScrolledText(target_frame, wrap="word", font=('微软雅黑', 10))
+        target_text.pack(fill=BOTH, expand=True)
+        target_text.text.insert('1.0', values[2])
+        target_text.text.configure(state='disabled')
+
+        # 按钮容器
+        button_container = tb.Frame(main_container)
+        button_container.grid(row=2, column=0, pady=(10, 0))
+
+        # 复制按钮
+        copy_source_btn = tb.Button(button_container, text="复制原文", 
+                                bootstyle=INFO,
+                                command=lambda: self._copy_to_clipboard(values[1]))
+        copy_source_btn.pack(side="left", padx=(0, 5))
+
+        copy_target_btn = tb.Button(button_container, text="复制译文", 
+                                bootstyle=INFO,
+                                command=lambda: self._copy_to_clipboard(values[2]))
+        copy_target_btn.pack(side="left", padx=5)
+
+        # 关闭按钮
+        close_btn = tb.Button(button_container, text="关闭", 
+                            bootstyle=PRIMARY,
+                            command=detail_window.destroy)
+        close_btn.pack(side="right", padx=(5, 0))
+
+    def _copy_to_clipboard(self, text):
+        """复制文本到剪贴板"""
+        self.notebook.clipboard_clear()
+        self.notebook.clipboard_append(text)
+
+    def _on_search(self, *args):
+        """处理搜索事件"""
+        search_text = self.search_var.get().lower()
+        self.history_list.delete(*self.history_list.get_children())
+        
+        history = self.settings_manager.load_translation_history()
+        for item in history.values():
+            if (search_text in item['source_text'].lower() or 
+                search_text in item['target_text'].lower()):
+                self.history_list.insert('', 'end', values=(
+                    item['time'],
+                    item['source_text'],
+                    item['target_text'],
+                    item['from_lang'],
+                    item['to_lang']
+                ))
+
+    def load_history(self):
+        """加载历史记录"""
+        self.history_list.delete(*self.history_list.get_children())
+        history = self.settings_manager.load_translation_history()
+        for item in history.values():
+            self.history_list.insert('', 'end', values=(
+                item['time'],
+                item['source_text'],
+                item['target_text'],
+                item['from_lang'],
+                item['to_lang']
+            ))
+
+    def clear_history(self):
+        """清空历史记录"""
+        if Messagebox.yesno("确认", "确定要清空所有历史记录吗？"):
+            self.settings_manager.save_translation_history({})
+            self.load_history()
 
 class UIManager:
     def __init__(self, root, settings_manager):
@@ -507,6 +711,8 @@ class UIManager:
             # 保存所有配置
             if self.settings_manager.save_all_config(appid, appkey, shortcuts, theme, source_lang, target_lang):
                 self.translator = BaiduTranslator(appid, appkey)
+                # 设置保存回调
+                self.translator.cache.save_callback = self.settings_manager.save_translation_history
                 Messagebox.show_info("成功", "配置已保存")
         except Exception as e:
             logging.error(f"保存配置失败: {str(e)}")
@@ -523,6 +729,8 @@ class UIManager:
                 self.config_tab_manager.appkey_entry.delete(0, "end")
                 self.config_tab_manager.appkey_entry.insert(0, appkey)
                 self.translator = BaiduTranslator(appid, appkey)
+                # 设置保存回调
+                self.translator.cache.save_callback = self.settings_manager.save_translation_history
             
             # 加载快捷键配置
             self.config_tab_manager.load_shortcuts()
@@ -536,6 +744,11 @@ class UIManager:
             source_lang, target_lang = self.settings_manager.load_languages()
             self.translate_tab_manager.source_lang.set(source_lang)
             self.translate_tab_manager.target_lang.set(target_lang)
+
+            # 加载历史记录到缓存
+            if self.translator:
+                history = self.settings_manager.load_translation_history()
+                self.translator.cache._history = OrderedDict(history)
 
             logging.info("配置加载成功")
         except Exception as e:
@@ -607,10 +820,7 @@ class UIManager:
             from_lang = self.translate_tab_manager.source_lang.get()
             to_lang = self.translate_tab_manager.target_lang.get()
 
-
             self.translator.cache.add_to_history(source_text, result, from_lang, to_lang)
-
-            # 保存历史记录
             history = {k: v for k, v in self.translator.cache._history.items()}
             self.settings_manager.save_translation_history(history)
 
@@ -828,205 +1038,3 @@ class UIManager:
         """取消选择"""
         selector.destroy()
         self.root.deiconify()
-class HistoryTabManager:
-    def __init__(self, notebook, settings_manager):
-        self.notebook = notebook
-        self.settings_manager = settings_manager
-        self.history_list = None
-        self.clear_btn = None
-        self.search_var = None
-        self.search_entry = None
-        
-    def setup(self):
-        """设置历史记录标签页"""
-        history_frame = tb.Frame(self.notebook)
-        self.notebook.add(history_frame, text="📜 历史记录")
-        history_frame.pack_propagate(False)
-        history_frame.rowconfigure(1, weight=1)
-        history_frame.columnconfigure(0, weight=1)
-
-        # 创建工具栏
-        toolbar = tb.Frame(history_frame)
-        toolbar.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 5))
-
-        # 搜索框区域
-        search_container = tb.Frame(toolbar)
-        search_container.pack(side="left", fill="x", expand=True, padx=(0, 10))
-        
-        tb.Label(search_container, text="搜索:", bootstyle=INFO).pack(side="left", padx=(0, 5))
-        self.search_var = tb.StringVar()
-        self.search_var.trace('w', self._on_search)
-        self.search_entry = tb.Entry(search_container, textvariable=self.search_var, bootstyle=PRIMARY)
-        self.search_entry.pack(side="left", fill="x", expand=True)
-
-        # 操作按钮容器
-        button_container = tb.Frame(toolbar)
-        button_container.pack(side="right")
-        
-        self.clear_btn = tb.Button(button_container, text="清空历史", 
-                                bootstyle=DANGER,
-                                command=self.clear_history)
-        self.clear_btn.pack(padx=5, pady=5)
-
-        # 创建历史记录列表容器
-        list_container = tb.Frame(history_frame)
-        list_container.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
-        list_container.rowconfigure(0, weight=1)
-        list_container.columnconfigure(0, weight=1)
-
-        # 创建历史记录列表
-        self.history_list = tb.Treeview(list_container, 
-                                      columns=('time', 'source', 'target', 'from_lang', 'to_lang'),
-                                      show='headings')
-        
-        # 设置列标题和宽度
-        self.history_list.heading('time', text='时间')
-        self.history_list.heading('source', text='原文')
-        self.history_list.heading('target', text='译文')
-        self.history_list.heading('from_lang', text='源语言')
-        self.history_list.heading('to_lang', text='目标语言')
-        
-        # 设置列宽，使用相对宽度
-        self.history_list.column('time', width=120, minwidth=100)
-        self.history_list.column('source', width=200, minwidth=150)
-        self.history_list.column('target', width=200, minwidth=150)
-        self.history_list.column('from_lang', width=80, minwidth=60)
-        self.history_list.column('to_lang', width=80, minwidth=60)
-        
-        # 添加滚动条
-        v_scrollbar = tb.Scrollbar(list_container, orient=VERTICAL, command=self.history_list.yview)
-        h_scrollbar = tb.Scrollbar(list_container, orient=HORIZONTAL, command=self.history_list.xview)
-        self.history_list.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
-        
-        # 布局滚动条和列表
-        self.history_list.grid(row=0, column=0, sticky="nsew")
-        v_scrollbar.grid(row=0, column=1, sticky="ns")
-        h_scrollbar.grid(row=1, column=0, sticky="ew")
-        
-        # 绑定双击事件
-        self.history_list.bind('<Double-Button-1>', self._show_details)
-        
-        self.load_history()
-
-    def _show_details(self, event):
-        """显示详细信息"""
-        selection = self.history_list.selection()
-        if not selection:
-            return
-                
-        item = self.history_list.item(selection[0])
-        values = item['values']
-        
-        # 创建详情窗口
-        detail_window = tb.Toplevel(self.notebook)
-        detail_window.title("翻译详情")
-        detail_window.geometry("800x600")
-        detail_window.transient(self.notebook)
-        detail_window.grab_set()
-        
-        # 创建主容器
-        main_container = tb.Frame(detail_window)
-        main_container.pack(fill=BOTH, expand=True, padx=20, pady=20)
-        main_container.rowconfigure(1, weight=1)
-        main_container.columnconfigure(0, weight=1)
-
-        # 信息栏
-        info_frame = tb.Frame(main_container)
-        info_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10))
-        
-        # 时间标签
-        tb.Label(info_frame, text=f"翻译时间: {values[0]}", 
-                font=('微软雅黑', 10, 'bold')).pack(side="left", padx=(0, 20))
-        
-        # 语言标签
-        tb.Label(info_frame, text=f"翻译: {values[3]} → {values[4]}", 
-                font=('微软雅黑', 10)).pack(side="left")
-
-        # 文本区域容器
-        text_container = tb.Frame(main_container)
-        text_container.grid(row=1, column=0, sticky="nsew")
-        text_container.rowconfigure(0, weight=1)
-        text_container.rowconfigure(1, weight=1)
-        text_container.columnconfigure(0, weight=1)
-        text_container.columnconfigure(1, weight=1)
-
-        # 原文区域
-        source_frame = tb.LabelFrame(text_container, text="原文", padding=10)
-        source_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
-        
-        source_text = ScrolledText(source_frame, wrap="word", font=('微软雅黑', 10))
-        source_text.pack(fill=BOTH, expand=True)
-        source_text.text.insert('1.0', values[1])
-        source_text.text.configure(state='disabled')
-
-        # 译文区域
-        target_frame = tb.LabelFrame(text_container, text="译文", padding=10)
-        target_frame.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
-        
-        target_text = ScrolledText(target_frame, wrap="word", font=('微软雅黑', 10))
-        target_text.pack(fill=BOTH, expand=True)
-        target_text.text.insert('1.0', values[2])
-        target_text.text.configure(state='disabled')
-
-        # 按钮容器
-        button_container = tb.Frame(main_container)
-        button_container.grid(row=2, column=0, pady=(10, 0))
-
-        # 复制按钮
-        copy_source_btn = tb.Button(button_container, text="复制原文", 
-                                bootstyle=INFO,
-                                command=lambda: self._copy_to_clipboard(values[1]))
-        copy_source_btn.pack(side="left", padx=(0, 5))
-
-        copy_target_btn = tb.Button(button_container, text="复制译文", 
-                                bootstyle=INFO,
-                                command=lambda: self._copy_to_clipboard(values[2]))
-        copy_target_btn.pack(side="left", padx=5)
-
-        # 关闭按钮
-        close_btn = tb.Button(button_container, text="关闭", 
-                            bootstyle=PRIMARY,
-                            command=detail_window.destroy)
-        close_btn.pack(side="right", padx=(5, 0))
-
-    def _copy_to_clipboard(self, text):
-        """复制文本到剪贴板"""
-        self.notebook.clipboard_clear()
-        self.notebook.clipboard_append(text)
-
-    def _on_search(self, *args):
-        """处理搜索事件"""
-        search_text = self.search_var.get().lower()
-        self.history_list.delete(*self.history_list.get_children())
-        
-        history = self.settings_manager.load_translation_history()
-        for item in history.values():
-            if (search_text in item['source_text'].lower() or 
-                search_text in item['target_text'].lower()):
-                self.history_list.insert('', 'end', values=(
-                    item['time'],
-                    item['source_text'],
-                    item['target_text'],
-                    item['from_lang'],
-                    item['to_lang']
-                ))
-
-
-    def load_history(self):
-        """加载历史记录"""
-        self.history_list.delete(*self.history_list.get_children())
-        history = self.settings_manager.load_translation_history()
-        for item in history.values():
-            self.history_list.insert('', 'end', values=(
-                item['time'],
-                item['source_text'],
-                item['target_text'],
-                item['from_lang'],
-                item['to_lang']
-            ))
-
-    def clear_history(self):
-        """清空历史记录"""
-        if Messagebox.yesno("确认", "确定要清空所有历史记录吗？"):
-            self.settings_manager.save_translation_history({})
-            self.load_history()
