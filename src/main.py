@@ -12,6 +12,7 @@ import sys
 import logging.handlers
 import concurrent.futures
 from functools import lru_cache
+
 def get_base_path():
     """获取程序运行的基础路径"""
     if getattr(sys, 'frozen', False):
@@ -61,6 +62,7 @@ def setup_logging():
     logger.setLevel(logging.INFO)
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
+
 def check_directories():
     """检查并创建必要的目录"""
     try:
@@ -76,9 +78,24 @@ def check_directories():
         Messagebox.showerror("错误", f"创建目录失败: {str(e)}")
         raise
 
-class TranslatorApp:
+class AppBase:
     def __init__(self, root):
         self.root = root
+        self._setup_logging()
+        self._check_directories()
+        self._init_components()
+
+    def _setup_logging(self):
+        setup_logging()
+
+    def _check_directories(self):
+        check_directories()
+
+    def _init_components(self):
+        raise NotImplementedError
+
+class TranslatorApp(AppBase):
+    def _init_components(self):
         self.root.title("翻译工具")
         self.root.geometry("1000x700")
         self.root.minsize(800, 600)
@@ -96,20 +113,7 @@ class TranslatorApp:
         
         # 等待UI完全初始化后再显示窗口
         self.root.after(100, self._show_window)
-    def _async_load_config(self):
-        """异步加载配置"""
-        try:
-            # 在后台线程中加载配置
-            appid, appkey = self.settings_manager.load_config()
-            shortcuts = self.settings_manager.load_shortcuts()
-            theme = self.settings_manager.load_theme()
-            source_lang, target_lang = self.settings_manager.load_languages()
-            
-            # 在主线程中应用配置
-            self.root.after(0, self._apply_config, appid, appkey, shortcuts, theme, source_lang, target_lang)
-        except Exception as e:
-            logging.error(f"异步加载配置失败: {str(e)}")
-        
+
     def _show_window(self):
         """显示窗口"""
         try:
@@ -138,15 +142,6 @@ class TranslatorApp:
             self.ui_manager.bind_shortcuts()
         except Exception as e:
             logging.error(f"加载配置失败: {str(e)}")
-            
-    def _apply_config(self, appid, appkey, shortcuts, theme, source_lang, target_lang):
-        """在主线程中应用配置"""
-        try:
-            self.settings_manager.set_theme(theme)
-            self.ui_manager.load_config()
-            self.ui_manager.bind_shortcuts()
-        except Exception as e:
-            logging.error(f"应用配置失败: {str(e)}")
 
 def main():
     try:

@@ -354,3 +354,44 @@ class SettingsManager:
         except Exception as e:
             logging.error(f"加载翻译历史失败: {str(e)}")
             return {}
+class BaseConfigManager:
+    def __init__(self, config_file):
+        self.config_file = config_file
+        self._config_lock = threading.Lock()
+        self._config_cache = {}
+        self._config_cache_time = 0
+        self._config_cache_timeout = 10
+        os.makedirs(os.path.dirname(self.config_file), exist_ok=True)
+
+    def _load_config(self):
+        current_time = time.time()
+        if (self._config_cache and 
+            current_time - self._config_cache_time < self._config_cache_timeout):
+            return self._config_cache
+
+        try:
+            with self._config_lock:
+                config = configparser.ConfigParser()
+                with open(self.config_file, 'r', encoding='utf-8') as f:
+                    config.read_file(f)
+                self._config_cache = config
+                self._config_cache_time = current_time
+                return config
+        except Exception as e:
+            logging.error(f"加载配置失败: {str(e)}")
+            return configparser.ConfigParser()
+
+    def _save_config(self, config):
+        with self._config_lock:
+            temp_file = self.config_file + '.tmp'
+            try:
+                with open(temp_file, 'w', encoding='utf-8') as f:
+                    config.write(f)
+                os.replace(temp_file, self.config_file)
+                self._config_cache = config
+                self._config_cache_time = time.time()
+                return True
+            except Exception as e:
+                if os.path.exists(temp_file):
+                    os.remove(temp_file)
+                raise e

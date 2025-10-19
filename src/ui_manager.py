@@ -1111,3 +1111,23 @@ class UIManager:
         except Exception as e:
             logging.error(f"朗读失败: {str(e)}")
             Messagebox.show_error("错误", f"朗读失败: {str(e)}")
+class TabManager:
+    def __init__(self, notebook, settings_manager):
+        self.notebook = notebook
+        self.settings_manager = settings_manager
+        self._widgets = {}
+
+    def setup(self):
+        raise NotImplementedError
+
+    def _create_frame(self, text):
+        frame = tb.Frame(self.notebook)
+        self.notebook.add(frame, text=text)
+        return frame
+
+    def _create_labeled_frame(self, parent, text, padding=10, bootstyle=INFO):
+        frame = tb.LabelFrame(parent, text=text, padding=padding, bootstyle=bootstyle)
+        return frame
+
+    def _create_button(self, parent, text, command, bootstyle=PRIMARY, width=10):
+        return tb.Button(parent, text=text, command=command, bootstyle=bootstyle, width=width)
