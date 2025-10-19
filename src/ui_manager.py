@@ -28,7 +28,7 @@ class TitleBarManager:
         
         # 创建标题和控制按钮容器
         content_frame = tb.Frame(self.title_bar, bootstyle=PRIMARY)
-        content_frame.pack(fill="x", padx=10)
+        content_frame.pack(fill="x", expand=True)  # 添加 expand=True
         
         # 创建标题和控制按钮
         title_label = tb.Label(content_frame, text="翻译工具", 
@@ -36,25 +36,25 @@ class TitleBarManager:
                             bootstyle="primary-inverse.TLabel")
         title_label.pack(side="left", padx=5)
         
-        # 创建按钮容器
+        # 创建按钮容器，确保右对齐
         button_frame = tb.Frame(content_frame, bootstyle=PRIMARY)
-        button_frame.pack(side="right", fill="y")
+        button_frame.pack(side="right", fill="y", padx=0)  # 移除右边距
         
-        # 添加控制按钮
+        # 添加控制按钮，调整样式
         min_btn = tb.Button(button_frame, text="─", width=3,
                         bootstyle="primary.TButton",
                         command=self.root.iconify)
-        min_btn.pack(side="left")
+        min_btn.pack(side="left", padx=(0,1))  # 减小按钮间距
         
         self.max_btn = tb.Button(button_frame, text="□", width=3,
                             bootstyle="primary.TButton",
                             command=self.toggle_maximize)
-        self.max_btn.pack(side="left")
+        self.max_btn.pack(side="left", padx=1)  # 减小按钮间距
         
         close_btn = tb.Button(button_frame, text="✕", width=3,
-                            bootstyle="danger.TButton",
+                            bootstyle="danger.TButton",  # 使用danger样式显示红色
                             command=self.root.quit)
-        close_btn.pack(side="left")
+        close_btn.pack(side="left", padx=(1,0))  # 减小按钮间距
 
         # 绑定拖动事件到整个标题栏
         self.title_bar.bind('<Button-1>', self.start_move)
@@ -69,28 +69,26 @@ class TitleBarManager:
         try:
             if theme == '黑夜':
                 self.title_bar.configure(bootstyle='dark')
-                self.max_btn.configure(bootstyle='dark.TButton')
-                # 安全地获取并更新按钮样式
+                # 更新所有按钮样式
                 for child in self.title_bar.winfo_children():
                     if isinstance(child, tb.Frame):
                         for btn in child.winfo_children():
                             if isinstance(btn, tb.Button):
-                                if btn.cget('text') == '─':  # 最小化按钮
+                                if btn.cget('text') in ['─', '□']:  # 最小化和最大化按钮
                                     btn.configure(bootstyle='dark.TButton')
                                 elif btn.cget('text') == '✕':  # 关闭按钮
-                                    btn.configure(bootstyle='danger.TButton')
+                                    btn.configure(bootstyle='danger.TButton')  # 保持红色
             else:
                 self.title_bar.configure(bootstyle='primary')
-                self.max_btn.configure(bootstyle='primary.TButton')
-                # 安全地获取并更新按钮样式
+                # 更新所有按钮样式
                 for child in self.title_bar.winfo_children():
                     if isinstance(child, tb.Frame):
                         for btn in child.winfo_children():
                             if isinstance(btn, tb.Button):
-                                if btn.cget('text') == '─':  # 最小化按钮
+                                if btn.cget('text') in ['─', '□']:  # 最小化和最大化按钮
                                     btn.configure(bootstyle='primary.TButton')
-                                elif btn.cget('text') == '✕':  # 清空按钮
-                                    btn.configure(bootstyle='danger.TButton')
+                                elif btn.cget('text') == '✕':  # 关闭按钮
+                                    btn.configure(bootstyle='danger.TButton')  # 保持红色
         except Exception as e:
             logging.error(f"更新标题栏样式失败: {str(e)}")
 
@@ -632,7 +630,10 @@ class UIManager:
             # 添加内边距到notebook
             notebook = tb.Notebook(main_container, bootstyle=INFO)
             notebook.pack(padx=20, pady=20, fill=BOTH, expand=True)
-
+            
+            # 确保标题栏和主内容区域之间没有间隙
+            self.root.configure(bg=self.root.style.lookup('TFrame', 'background'))
+            
             # 创建标签页管理器
             self.translate_tab_manager = TranslateTabManager(notebook, self.settings_manager)
             self.history_tab_manager = HistoryTabManager(notebook, self.settings_manager)
@@ -651,7 +652,6 @@ class UIManager:
         except Exception as e:
             logging.error(f"界面初始化失败: {str(e)}")
             Messagebox.show_error("错误", f"界面初始化失败: {str(e)}")
-
     def _bind_events(self):
         """绑定事件"""
         # 绑定主题切换事件
