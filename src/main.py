@@ -94,9 +94,6 @@ class TranslatorApp:
         self.root.withdraw()
         self.ui_manager = UIManager(self.root, self.settings_manager)
         
-        # 异步加载配置
-        self.executor.submit(self._async_load_config)
-        
         # 等待UI完全初始化后再显示窗口
         self.root.after(100, self._show_window)
     def _async_load_config(self):

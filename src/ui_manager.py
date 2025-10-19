@@ -649,12 +649,21 @@ class UIManager:
     def _load_other_tabs(self):
         """延迟加载其他标签页"""
         try:
-            self.history_tab_manager = HistoryTabManager(self.notebook, self.settings_manager)
+            # 先创建配置标签页
             self.config_tab_manager = ConfigTabManager(self.notebook, self.settings_manager)
+            self.config_tab_manager.setup()
+            
+            # 等待配置标签页初始化完成后再加载其他标签页
+            self.root.after(50, self._load_remaining_tabs)
+        except Exception as e:
+            logging.error(f"加载配置标签页失败: {str(e)}")
+    def _load_remaining_tabs(self):
+        """加载剩余标签页"""
+        try:
+            self.history_tab_manager = HistoryTabManager(self.notebook, self.settings_manager)
             self.about_tab_manager = AboutTabManager(self.notebook)
             
             self.history_tab_manager.setup()
-            self.config_tab_manager.setup()
             self.about_tab_manager.setup()
             
             # 绑定事件
@@ -663,8 +672,7 @@ class UIManager:
             # 通知主应用配置标签页已准备就绪
             self.root.event_generate('<<ConfigTabReady>>')
         except Exception as e:
-            logging.error(f"加载其他标签页失败: {str(e)}")
-
+            logging.error(f"加载剩余标签页失败: {str(e)}")
     def _bind_events(self):
         """绑定事件"""
         # 绑定主题切换事件
@@ -741,9 +749,10 @@ class UIManager:
     def load_config(self):
         """加载配置"""
         try:
-            # 检查配置标签页是否已初始化
+            # 确保配置标签页已初始化
             if not self.config_tab_manager:
-                logging.warning("配置标签页尚未初始化，跳过配置加载")
+                logging.warning("配置标签页尚未初始化，等待初始化完成...")
+                self.root.after(100, self.load_config)  # 延迟重试
                 return
                 
             # 加载API配置
@@ -757,28 +766,8 @@ class UIManager:
                 # 设置保存回调
                 self.translator.cache.save_callback = self.settings_manager.save_translation_history
             
-            # 加载快捷键配置
-            if self.config_tab_manager:
-                self.config_tab_manager.load_shortcuts()
-            
-            # 加载主题配置
-            theme = self.settings_manager.load_theme()
-            if self.config_tab_manager:
-                self.config_tab_manager.theme_var.set(theme)
-            self.settings_manager.set_theme(theme)
-            
-            # 加载语言配置
-            source_lang, target_lang = self.settings_manager.load_languages()
-            if self.translate_tab_manager:
-                self.translate_tab_manager.source_lang.set(source_lang)
-                self.translate_tab_manager.target_lang.set(target_lang)
-
-            # 加载历史记录到缓存
-            if self.translator:
-                history = self.settings_manager.load_translation_history()
-                self.translator.cache._history = OrderedDict(history)
-
-            logging.info("配置加载成功")
+            # 加载其他配置
+            self._load_remaining_configs()
         except Exception as e:
             logging.error(f"加载配置失败: {str(e)}")
             Messagebox.show_error("错误", f"加载配置失败: {str(e)}")
