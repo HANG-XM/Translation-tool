@@ -616,6 +616,11 @@ class UIManager:
     def setup_ui(self):
         """设置用户界面"""
         try:
+            # 创建加载指示器
+            self.loading_label = tb.Label(self.root, text="正在加载...", 
+                                        font=('微软雅黑', 12))
+            self.loading_label.place(relx=0.5, rely=0.5, anchor='center')
+            
             # 基本窗口设置
             self.root.overrideredirect(True)
             self.root.style.configure('TNotebook', tabposition='nw')
@@ -669,8 +674,12 @@ class UIManager:
             # 绑定事件
             self._bind_events()
             
-            # 通知主应用配置标签页已准备就绪
-            self.root.event_generate('<<ConfigTabReady>>')
+            # 隐藏加载指示器
+            if hasattr(self, 'loading_label'):
+                self.loading_label.place_forget()
+                
+            # 通知主应用所有标签页已准备就绪
+            self.root.event_generate('<<AllTabsReady>>')
         except Exception as e:
             logging.error(f"加载剩余标签页失败: {str(e)}")
     def _bind_events(self):

@@ -117,11 +117,14 @@ class TranslatorApp(AppBase):
     def _show_window(self):
         """显示窗口"""
         try:
-            self.root.deiconify()
-            # 确保UI组件已初始化
-            if not self.ui_manager.config_tab_manager:
+            # 确保所有标签页都已加载完成
+            if not (self.ui_manager.config_tab_manager and 
+                    self.ui_manager.history_tab_manager and 
+                    self.ui_manager.about_tab_manager):
                 self.root.after(100, self._show_window)  # 延迟重试
                 return
+                
+            self.root.deiconify()
             # 加载配置
             self._load_config()
         except Exception as e:
