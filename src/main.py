@@ -89,17 +89,31 @@ class TranslatorApp:
         self.root.update()
         self.ui_manager = UIManager(self.root, self.settings_manager)
         
-        # 使用线程加载配置
+        # 使用线程加载配置，但将UI操作放回主线程
         threading.Thread(target=self._load_config, daemon=True).start()
         
     def _load_config(self):
         """在线程中加载配置"""
         try:
-            self.settings_manager.set_theme('flatly')
+            # 在后台线程中加载非UI配置
+            appid, appkey = self.settings_manager.load_config()
+            shortcuts = self.settings_manager.load_shortcuts()
+            theme = self.settings_manager.load_theme()
+            source_lang, target_lang = self.settings_manager.load_languages()
+            
+            # 将UI操作放回主线程执行
+            self.root.after(0, lambda: self._apply_config(appid, appkey, shortcuts, theme, source_lang, target_lang))
+        except Exception as e:
+            logging.error(f"加载配置失败: {str(e)}")
+            
+    def _apply_config(self, appid, appkey, shortcuts, theme, source_lang, target_lang):
+        """在主线程中应用配置"""
+        try:
+            self.settings_manager.set_theme(theme)
             self.ui_manager.load_config()
             self.ui_manager.bind_shortcuts()
         except Exception as e:
-            logging.error(f"加载配置失败: {str(e)}")
+            logging.error(f"应用配置失败: {str(e)}")
 
 def main():
     try:

@@ -120,6 +120,20 @@ class ThemeManager:
     def set_theme(self, theme):
         """设置主题"""
         try:
+            # 检查是否在主线程
+            if not threading.current_thread() is threading.main_thread():
+                # 如果不在主线程，将操作放回主线程
+                self.root.after(0, lambda: self._set_theme_in_main_thread(theme))
+                return
+                
+            self._set_theme_in_main_thread(theme)
+        except Exception as e:
+            logging.error(f"设置主题失败: {str(e)}")
+            raise
+            
+    def _set_theme_in_main_thread(self, theme):
+        """在主线程中设置主题"""
+        try:
             # 保存当前窗口状态
             geometry = self.root.geometry()
             current_tab = None
