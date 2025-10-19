@@ -628,30 +628,38 @@ class UIManager:
             main_container.pack(fill=BOTH, expand=True)
 
             # 添加内边距到notebook
-            notebook = tb.Notebook(main_container, bootstyle=INFO)
-            notebook.pack(padx=20, pady=20, fill=BOTH, expand=True)
+            self.notebook = tb.Notebook(main_container, bootstyle=INFO)  # 改为实例变量
+            self.notebook.pack(padx=20, pady=20, fill=BOTH, expand=True)
             
             # 确保标题栏和主内容区域之间没有间隙
             self.root.configure(bg=self.root.style.lookup('TFrame', 'background'))
             
-            # 创建标签页管理器
-            self.translate_tab_manager = TranslateTabManager(notebook, self.settings_manager)
-            self.history_tab_manager = HistoryTabManager(notebook, self.settings_manager)
-            self.config_tab_manager = ConfigTabManager(notebook, self.settings_manager)
-            self.about_tab_manager = AboutTabManager(notebook)
-        
-            # 设置各个标签页
+            # 先创建翻译标签页
+            self.translate_tab_manager = TranslateTabManager(self.notebook, self.settings_manager)  # 使用实例变量
             self.translate_tab_manager.setup()
-            self.history_tab_manager.setup()
-            self.config_tab_manager.setup()
-            self.about_tab_manager.setup()
-            # 绑定事件
-            self._bind_events()
-
+            
+            # 延迟加载其他标签页
+            self.root.after(100, self._load_other_tabs)
+            
             logging.info("界面初始化完成")
         except Exception as e:
             logging.error(f"界面初始化失败: {str(e)}")
             Messagebox.show_error("错误", f"界面初始化失败: {str(e)}")
+    def _load_other_tabs(self):
+        """延迟加载其他标签页"""
+        try:
+            self.history_tab_manager = HistoryTabManager(self.notebook, self.settings_manager)  # 使用实例变量
+            self.config_tab_manager = ConfigTabManager(self.notebook, self.settings_manager)  # 使用实例变量
+            self.about_tab_manager = AboutTabManager(self.notebook)  # 使用实例变量
+            
+            self.history_tab_manager.setup()
+            self.config_tab_manager.setup()
+            self.about_tab_manager.setup()
+            
+            # 绑定事件
+            self._bind_events()
+        except Exception as e:
+            logging.error(f"加载其他标签页失败: {str(e)}")
     def _bind_events(self):
         """绑定事件"""
         # 绑定主题切换事件

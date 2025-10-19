@@ -5,6 +5,7 @@ import logging
 import configparser
 from datetime import datetime
 import time
+import threading
 from settings_manager import SettingsManager
 from ui_manager import UIManager
 import sys
@@ -84,13 +85,21 @@ class TranslatorApp:
         self.config_file = os.path.join(base_path, 'data', 'config.ini')
         self.settings_manager = SettingsManager(self.root, self.config_file)
         
-        setup_logging()
-        check_directories()
-        
+        # 先显示窗口，再进行其他初始化
+        self.root.update()
         self.ui_manager = UIManager(self.root, self.settings_manager)
-        self.settings_manager.set_theme('flatly')  # 修改为与ttkbootstrap主题名称一致
-        self.ui_manager.load_config()
-        self.ui_manager.bind_shortcuts()
+        
+        # 使用线程加载配置
+        threading.Thread(target=self._load_config, daemon=True).start()
+        
+    def _load_config(self):
+        """在线程中加载配置"""
+        try:
+            self.settings_manager.set_theme('flatly')
+            self.ui_manager.load_config()
+            self.ui_manager.bind_shortcuts()
+        except Exception as e:
+            logging.error(f"加载配置失败: {str(e)}")
 
 def main():
     try:

@@ -53,16 +53,22 @@ class ConfigManager:
         if not os.path.exists(self.config_file):
             return None, None
 
-        with self._config_lock:
-            config = configparser.ConfigParser()
-            config.read(self.config_file, encoding='utf-8')
-            
-            if 'BaiduAPI' in config:
-                appid = config['BaiduAPI'].get('appid', '')
-                appkey = config['BaiduAPI'].get('appkey', '')
-                self._update_cache(appid, appkey)
-                return appid, appkey
-            
+        try:
+            with self._config_lock:
+                config = configparser.ConfigParser()
+                # 使用线程安全的读取方式
+                with open(self.config_file, 'r', encoding='utf-8') as f:
+                    config.read_file(f)
+                
+                if 'BaiduAPI' in config:
+                    appid = config['BaiduAPI'].get('appid', '')
+                    appkey = config['BaiduAPI'].get('appkey', '')
+                    self._update_cache(appid, appkey)
+                    return appid, appkey
+                
+                return None, None
+        except Exception as e:
+            logging.error(f"加载配置失败: {str(e)}")
             return None, None
     
     def save_shortcuts(self, shortcuts):
