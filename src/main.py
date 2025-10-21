@@ -103,7 +103,6 @@ class TranslatorApp(AppBase):
         # 设置窗口圆角
         self.root.overrideredirect(True)
         self.root.attributes('-transparentcolor', 'black')
-        self.root.configure(bg='black')
         
         base_path = get_base_path()
         self.config_file = os.path.join(base_path, 'data', 'config.ini')

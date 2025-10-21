@@ -26,14 +26,11 @@ class TitleBarManager:
         """设置标题栏"""
         self.title_bar = tb.Frame(self.root, bootstyle=PRIMARY)
         self.title_bar.pack(fill="x")
-        # 设置窗口圆角
-        self.root.attributes('-transparentcolor', 'black')
-        self.root.configure(bg='black')
         # 创建标题和控制按钮容器
         content_frame = tb.Frame(self.title_bar, bootstyle=PRIMARY)
         content_frame.pack(fill="x", expand=True)  # 添加 expand=True
         # 创建阴影效果
-        shadow_frame = tb.Frame(self.root, bg='gray20')
+        shadow_frame = tb.Frame(self.root, bootstyle='dark')
         shadow_frame.place(x=2, y=2, relwidth=1, relheight=1)
         
         # 创建主容器
@@ -648,8 +645,6 @@ class UIManager:
             self.notebook = tb.Notebook(main_container, bootstyle=INFO)
             self.notebook.pack(padx=20, pady=20, fill=BOTH, expand=True)
             
-            # 确保标题栏和主内容区域之间没有间隙
-            self.root.configure(bg=self.root.style.lookup('TFrame', 'background'))
             
             # 先创建翻译标签页
             self.translate_tab_manager = TranslateTabManager(self.notebook, self.settings_manager)
@@ -1079,7 +1074,7 @@ class UIManager:
     def _add_selection_hints(self, selector):
         """添加选择提示"""
         import tkinter as tk
-        hint_frame = tk.Frame(selector, bg='black')
+        hint_frame = tk.Frame(selector)
         hint_frame.place(relx=0.5, rely=0.1, anchor='center')
         
         tk.Label(
@@ -1089,7 +1084,7 @@ class UIManager:
             fg='white',
             font=('微软雅黑', 12)
         ).pack()
-        
+
         tk.Label(
             hint_frame,
             text="按 ESC 键取消",
