@@ -26,11 +26,19 @@ class TitleBarManager:
         """设置标题栏"""
         self.title_bar = tb.Frame(self.root, bootstyle=PRIMARY)
         self.title_bar.pack(fill="x")
-        
+        # 设置窗口圆角
+        self.root.attributes('-transparentcolor', 'black')
+        self.root.configure(bg='black')
         # 创建标题和控制按钮容器
         content_frame = tb.Frame(self.title_bar, bootstyle=PRIMARY)
         content_frame.pack(fill="x", expand=True)  # 添加 expand=True
+        # 创建阴影效果
+        shadow_frame = tb.Frame(self.root, bg='gray20')
+        shadow_frame.place(x=2, y=2, relwidth=1, relheight=1)
         
+        # 创建主容器
+        self.main_frame = tb.Frame(self.root, bootstyle=PRIMARY)
+        self.main_frame.place(x=0, y=0, relwidth=1, relheight=1)
         # 创建标题和控制按钮
         title_label = tb.Label(content_frame, text="翻译工具", 
                             font=('微软雅黑', 10, 'bold'),
@@ -625,7 +633,10 @@ class UIManager:
             self.root.overrideredirect(True)
             self.root.style.configure('TNotebook', tabposition='nw')
             self.root.style.configure('TNotebook.Tab', padding=[20, 10])
-
+            
+            # 创建圆角效果的容器
+            self.main_container = tb.Frame(self.root, bootstyle=PRIMARY)
+            self.main_container.pack(fill=BOTH, expand=True, padx=2, pady=2)
             # 创建主要UI组件
             self.title_bar_manager.setup()
             

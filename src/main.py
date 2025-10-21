@@ -100,6 +100,11 @@ class TranslatorApp(AppBase):
         self.root.geometry("1000x700")
         self.root.minsize(800, 600)
         
+        # 设置窗口圆角
+        self.root.overrideredirect(True)
+        self.root.attributes('-transparentcolor', 'black')
+        self.root.configure(bg='black')
+        
         base_path = get_base_path()
         self.config_file = os.path.join(base_path, 'data', 'config.ini')
         self.settings_manager = SettingsManager(self.root, self.config_file)
