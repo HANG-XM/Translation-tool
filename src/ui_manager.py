@@ -14,6 +14,55 @@ import pyautogui
 from collections import OrderedDict
 import weakref
 from functools import lru_cache
+class BaseUIComponent:
+    def __init__(self, parent, settings_manager):
+        self.parent = parent
+        self.settings_manager = settings_manager
+
+    def _create_frame(self, text):
+        frame = tb.Frame(self.parent)
+        self.parent.add(frame, text=text)
+        return frame
+
+    def _create_labeled_frame(self, parent, text, padding=10, bootstyle=INFO):
+        return tb.LabelFrame(parent, text=text, padding=padding, bootstyle=bootstyle)
+
+    def _create_button(self, parent, text, command, bootstyle=PRIMARY, width=10):
+        return tb.Button(parent, text=text, command=command, bootstyle=bootstyle, width=width)
+class LanguageMapper:
+    LANG_MAP = {
+        '自动检测': 'auto',
+        '中文': 'zh',
+        '英语': 'en',
+        '日语': 'ja',
+        '韩语': 'ko',
+        '法语': 'fr',
+        '德语': 'de',
+        '俄语': 'ru',
+        '西班牙语': 'es'
+    }
+
+    @classmethod
+    def get_lang_code(cls, lang_name):
+        return cls.LANG_MAP.get(lang_name, 'auto')
+class ErrorHandler:
+    @staticmethod
+    def handle_error(error, operation="操作"):
+        error_msg = f"{operation}失败: {str(error)}"
+        logging.error(error_msg)
+        Messagebox.show_error("错误", error_msg)
+class StatsManager:
+    def __init__(self, settings_manager):
+        self.settings_manager = settings_manager
+
+    def update_stats(self, source_text):
+        stats = self.settings_manager.load_translation_stats()
+        stats['total_translations'] = int(stats.get('total_translations', 0)) + 1
+        stats['total_characters'] = int(stats.get('total_characters', 0)) + len(source_text)
+        stats['daily_translations'] = int(stats.get('daily_translations', 0)) + 1
+        stats['daily_characters'] = int(stats.get('daily_characters', 0)) + len(source_text)
+        self.settings_manager.save_translation_stats(stats)
+        return stats
 class TitleBarManager:
     def __init__(self, root):
         self.root = root
@@ -124,8 +173,9 @@ class TitleBarManager:
             self.max_btn.config(text="□")
             self.is_maximized = False
 
-class TranslateTabManager:
+class TranslateTabManager(BaseUIComponent):
     def __init__(self, notebook, settings_manager):
+        super().__init__(notebook, settings_manager)
         self.notebook = notebook
         self.settings_manager = settings_manager
         self.source_lang = None
@@ -163,13 +213,13 @@ class TranslateTabManager:
 
         tb.Label(lang_grid, text="源语言:", font=('微软雅黑', 9)).grid(row=0, column=0, padx=(5,2), pady=2, sticky=E)
         self.source_lang = tb.Combobox(lang_grid, width=12, state="readonly", bootstyle=INFO)
-        self.source_lang['values'] = ('自动检测', '中文', '英语', '日语', '韩语', '法语', '德语', '俄语', '西班牙语')
+        self.source_lang['values'] = LanguageMapper.LANG_MAP.keys()
         self.source_lang.set('自动检测')
         self.source_lang.grid(row=0, column=1, padx=(0,10), pady=2, sticky=W+E)
 
         tb.Label(lang_grid, text="目标语言:", font=('微软雅黑', 9)).grid(row=0, column=2, padx=(5,2), pady=2, sticky=E)
         self.target_lang = tb.Combobox(lang_grid, width=12, state="readonly", bootstyle=INFO)
-        self.target_lang['values'] = ('中文', '英语', '日语', '韩语', '法语', '德语', '俄语', '西班牙语')
+        self.target_lang['values'] = list(LanguageMapper.LANG_MAP.keys())[1:]
         self.target_lang.set('英语')
         self.target_lang.grid(row=0, column=3, padx=(0,5), pady=2, sticky=W+E)
 
@@ -233,8 +283,9 @@ class TranslateTabManager:
         button_grid.columnconfigure(3, weight=1)
         button_grid.columnconfigure(4, weight=1)
 
-class ConfigTabManager:
+class ConfigTabManager(BaseUIComponent):
     def __init__(self, notebook, settings_manager):
+        super().__init__(notebook, settings_manager)
         self.notebook = notebook
         self.settings_manager = settings_manager
         self.theme_var = None
@@ -329,8 +380,9 @@ class ConfigTabManager:
         self.capture_shortcut.delete(0, "end")
         self.capture_shortcut.insert(0, shortcuts.get('capture', '<Control-s>'))
 
-class AboutTabManager:
+class AboutTabManager(BaseUIComponent):
     def __init__(self, notebook, settings_manager):
+        super().__init__(notebook, settings_manager)
         self.notebook = notebook
         self.settings_manager = settings_manager
         
@@ -435,8 +487,9 @@ class AboutTabManager:
         tb.Label(total_frame,
                 text=f"{stats['total_translations']}次 ({stats['total_characters']}字)",
                 font=('微软雅黑', 10, 'bold')).pack(side=LEFT)
-class HistoryTabManager:
+class HistoryTabManager(BaseUIComponent):
     def __init__(self, notebook, settings_manager):
+        super().__init__(notebook, settings_manager)
         self.notebook = notebook
         self.settings_manager = settings_manager
         self.history_list = None
@@ -654,7 +707,7 @@ class UIManager:
         self.about_tab_manager = None
         self.translator = None
         self.history_tab_manager = None
-        
+        self.stats_manager = StatsManager(settings_manager)
         self.setup_ui()
         
     def setup_ui(self):
@@ -890,16 +943,14 @@ class UIManager:
                 '西班牙语': 'es'
             }
             
-            from_lang = lang_map[self.translate_tab_manager.source_lang.get()]
-            to_lang = lang_map[self.translate_tab_manager.target_lang.get()]
+            from_lang = LanguageMapper.get_lang_code(self.translate_tab_manager.source_lang.get())
+            to_lang = LanguageMapper.get_lang_code(self.translate_tab_manager.target_lang.get())
             
             result = self.translator.translate(source_text, from_lang=from_lang, to_lang=to_lang)
             
             self.root.after(0, self._update_result, result)
         except Exception as e:
-            error_msg = f"翻译失败: {str(e)}"
-            logging.error(error_msg)
-            self.root.after(0, self._show_error, error_msg)
+            ErrorHandler.handle_error(e, "翻译")
         finally:
             self.root.after(0, self._set_controls_state, 'normal')
 
@@ -1157,24 +1208,18 @@ class UIManager:
                 '俄语': 'ru',
                 '西班牙语': 'es'
             }
-            target_lang = lang_map.get(self.translate_tab_manager.target_lang.get(), 'zh')
+            target_lang = LanguageMapper.get_lang_code(self.translate_tab_manager.target_lang.get())
             
             self.translator.speak(text, target_lang)
         except Exception as e:
             logging.error(f"朗读失败: {str(e)}")
             Messagebox.show_error("错误", f"朗读失败: {str(e)}")
     def update_translation_stats(self, source_text):
-        """更新翻译统计"""
         try:
-            stats = self.settings_manager.load_translation_stats()
-            stats['total_translations'] = int(stats.get('total_translations', 0)) + 1
-            stats['total_characters'] = int(stats.get('total_characters', 0)) + len(source_text)
-            stats['daily_translations'] = int(stats.get('daily_translations', 0)) + 1
-            stats['daily_characters'] = int(stats.get('daily_characters', 0)) + len(source_text)
-            self.settings_manager.save_translation_stats(stats)
-            self._update_stats_display(stats)
+            self.stats_manager.update_stats(source_text)
+            self._update_stats_display(self.stats_manager.get_stats())
         except Exception as e:
-            logging.error(f"更新翻译统计失败: {str(e)}")
+            ErrorHandler.handle_error(e, "更新统计")
 
     def _update_stats_display(self, stats):
         """更新统计显示"""
@@ -1350,23 +1395,3 @@ class UIManager:
         except Exception as e:
             logging.error(f"导出JSON失败: {str(e)}")
             Messagebox.show_error("错误", f"导出JSON失败: {str(e)}")
-class TabManager:
-    def __init__(self, notebook, settings_manager):
-        self.notebook = notebook
-        self.settings_manager = settings_manager
-        self._widgets = {}
-
-    def setup(self):
-        raise NotImplementedError
-
-    def _create_frame(self, text):
-        frame = tb.Frame(self.notebook)
-        self.notebook.add(frame, text=text)
-        return frame
-
-    def _create_labeled_frame(self, parent, text, padding=10, bootstyle=INFO):
-        frame = tb.LabelFrame(parent, text=text, padding=padding, bootstyle=bootstyle)
-        return frame
-
-    def _create_button(self, parent, text, command, bootstyle=PRIMARY, width=10):
-        return tb.Button(parent, text=text, command=command, bootstyle=bootstyle, width=width)
