@@ -51,6 +51,25 @@ class ErrorHandler:
         error_msg = f"{operation}失败: {str(error)}"
         logging.error(error_msg)
         Messagebox.show_error("错误", error_msg)
+class ConfigManager:
+    def __init__(self, settings_manager):
+        self.settings_manager = settings_manager
+        
+    def save_config(self, appid, appkey, shortcuts, theme, source_lang, target_lang):
+        try:
+            if self.settings_manager.save_all_config(appid, appkey, shortcuts, theme, source_lang, target_lang):
+                return True
+            return False
+        except Exception as e:
+            ErrorHandler.handle_error(e, "保存配置")
+            return False
+            
+    def load_config(self):
+        try:
+            return self.settings_manager.load_config()
+        except Exception as e:
+            ErrorHandler.handle_error(e, "加载配置")
+            return None, None
 class StatsManager:
     def __init__(self, settings_manager):
         self.settings_manager = settings_manager
@@ -172,20 +191,33 @@ class TitleBarManager:
             self.root.geometry(self.normal_geometry)
             self.max_btn.config(text="□")
             self.is_maximized = False
-
+class EventBindingMixin:
+    def bind_shortcuts(self):
+        try:
+            shortcuts = self.settings_manager.load_shortcuts()
+            self.root.unbind_class('Toplevel', '<Control-Return>')
+            self.root.unbind_class('Toplevel', '<Control-d>')
+            self.root.unbind_class('Toplevel', '<Control-s>')
+            
+            self.root.bind(shortcuts.get('translate', '<Control-Return>'), lambda e: self.translate())
+            self.root.bind(shortcuts.get('clear', '<Control-d>'), lambda e: self.clear_text())
+            self.root.bind(shortcuts.get('capture', '<Control-s>'), lambda e: self.capture_translate())
+            
+        except Exception as e:
+            ErrorHandler.handle_error(e, "绑定快捷键")
 class TranslateTabManager(BaseUIComponent):
     def __init__(self, notebook, settings_manager):
         super().__init__(notebook, settings_manager)
         self.notebook = notebook
-        self.settings_manager = settings_manager
+        self._init_variables()
+    def _init_variables(self):
         self.source_lang = None
         self.target_lang = None
         self.source_text = None
         self.target_text = None
-        self.translate_btn = None
-        self.clear_btn = None
-        self.capture_btn = None
-        
+        self.buttons = {}
+    def _create_button(self, parent, text, command, bootstyle=PRIMARY, width=10):
+        return super()._create_button(parent, text, command, bootstyle, width)     
     def setup(self):
         """设置翻译标签页"""
         translate_frame = tb.Frame(self.notebook)
