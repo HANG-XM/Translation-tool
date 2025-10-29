@@ -406,9 +406,13 @@ class AboutTabManager:
         stats_frame = tb.LabelFrame(parent, text="翻译统计", padding=20, bootstyle=INFO)
         stats_frame.pack(fill=X, pady=10)
         
+        # 创建统计行
+        stats_row = tb.Frame(stats_frame)
+        stats_row.pack(fill=X, pady=5)
+        
         # 今日统计
-        daily_frame = tb.Frame(stats_frame)
-        daily_frame.pack(fill=X, pady=5)
+        daily_frame = tb.Frame(stats_row)
+        daily_frame.pack(side=LEFT, padx=(0, 20))
         
         tb.Label(daily_frame, text="今日翻译：", font=('微软雅黑', 10)).pack(side=LEFT)
         tb.Label(daily_frame, 
@@ -416,8 +420,8 @@ class AboutTabManager:
                 font=('微软雅黑', 10, 'bold')).pack(side=LEFT)
         
         # 总计统计
-        total_frame = tb.Frame(stats_frame)
-        total_frame.pack(fill=X, pady=5)
+        total_frame = tb.Frame(stats_row)
+        total_frame.pack(side=LEFT)
         
         tb.Label(total_frame, text="总计翻译：", font=('微软雅黑', 10)).pack(side=LEFT)
         tb.Label(total_frame,
