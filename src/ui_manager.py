@@ -35,13 +35,7 @@ class TitleBarManager:
         # 创建标题和控制按钮容器
         content_frame = tb.Frame(self.title_bar, bootstyle=PRIMARY)
         content_frame.pack(fill="x", expand=True)
-        # 创建阴影效果
-        shadow_frame = tb.Frame(self.root, bootstyle='dark')
-        shadow_frame.place(x=2, y=2, relwidth=1, relheight=1)
         
-        # 创建主容器
-        self.main_frame = tb.Frame(self.root, bootstyle=PRIMARY)
-        self.main_frame.place(x=0, y=0, relwidth=1, relheight=1)
         # 创建标题和控制按钮
         title_label = tb.Label(content_frame, text="翻译工具", 
                             font=('微软雅黑', 10, 'bold'),
@@ -50,23 +44,23 @@ class TitleBarManager:
         
         # 创建按钮容器，确保右对齐
         button_frame = tb.Frame(content_frame, bootstyle=PRIMARY)
-        button_frame.pack(side="right", fill="y", padx=0)  # 移除右边距
+        button_frame.pack(side="right", fill="y", padx=0)
         
         # 添加控制按钮，调整样式
         min_btn = tb.Button(button_frame, text="─", width=3,
                         bootstyle="primary.TButton",
                         command=self.root.iconify)
-        min_btn.pack(side="left", padx=(0,1))  # 减小按钮间距
+        min_btn.pack(side="left", padx=(0,1))
         
         self.max_btn = tb.Button(button_frame, text="□", width=3,
                             bootstyle="primary.TButton",
                             command=self.toggle_maximize)
-        self.max_btn.pack(side="left", padx=1)  # 减小按钮间距
+        self.max_btn.pack(side="left", padx=1)
         
         close_btn = tb.Button(button_frame, text="✕", width=3,
-                            bootstyle="danger.TButton",  # 使用danger样式显示红色
+                            bootstyle="danger.TButton",
                             command=self.root.quit)
-        close_btn.pack(side="left", padx=(1,0))  # 减小按钮间距
+        close_btn.pack(side="left", padx=(1,0))
 
         # 绑定拖动事件到整个标题栏
         self.title_bar.bind('<Button-1>', self.start_move)
@@ -75,6 +69,7 @@ class TitleBarManager:
         content_frame.bind('<B1-Motion>', self.on_move)
         title_label.bind('<Button-1>', self.start_move)
         title_label.bind('<B1-Motion>', self.on_move)
+
 
     def update_style(self, theme):
         """更新标题栏样式"""
