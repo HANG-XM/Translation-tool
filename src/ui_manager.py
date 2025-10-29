@@ -401,7 +401,7 @@ class AboutTabManager:
         webbrowser.open(url)
     def _create_stats_card(self, parent):
         """创建统计信息卡片"""
-        stats = self.notebook.master.settings_manager.load_translation_stats()
+        stats = self.settings_manager.load_translation_stats()
         
         stats_frame = tb.LabelFrame(parent, text="翻译统计", padding=20, bootstyle=INFO)
         stats_frame.pack(fill=X, pady=10)
