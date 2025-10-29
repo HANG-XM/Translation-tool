@@ -24,11 +24,17 @@ class TitleBarManager:
         
     def setup(self):
         """设置标题栏"""
-        self.title_bar = tb.Frame(self.root, bootstyle=PRIMARY)
+        # 创建主容器
+        self.main_frame = tb.Frame(self.root, bootstyle=PRIMARY)
+        self.main_frame.place(x=0, y=0, relwidth=1, relheight=1)
+        
+        # 创建标题栏
+        self.title_bar = tb.Frame(self.main_frame, bootstyle=PRIMARY)
         self.title_bar.pack(fill="x")
+        
         # 创建标题和控制按钮容器
         content_frame = tb.Frame(self.title_bar, bootstyle=PRIMARY)
-        content_frame.pack(fill="x", expand=True)  # 添加 expand=True
+        content_frame.pack(fill="x", expand=True)
         # 创建阴影效果
         shadow_frame = tb.Frame(self.root, bootstyle='dark')
         shadow_frame.place(x=2, y=2, relwidth=1, relheight=1)
@@ -395,7 +401,30 @@ class AboutTabManager:
         """打开链接"""
         import webbrowser
         webbrowser.open(url)
-
+    def _create_stats_card(self, parent):
+        """创建统计信息卡片"""
+        stats = self.notebook.master.settings_manager.load_translation_stats()
+        
+        stats_frame = tb.LabelFrame(parent, text="翻译统计", padding=20, bootstyle=INFO)
+        stats_frame.pack(fill=X, pady=10)
+        
+        # 今日统计
+        daily_frame = tb.Frame(stats_frame)
+        daily_frame.pack(fill=X, pady=5)
+        
+        tb.Label(daily_frame, text="今日翻译：", font=('微软雅黑', 10)).pack(side=LEFT)
+        tb.Label(daily_frame, 
+                text=f"{stats['daily_translations']}次 ({stats['daily_characters']}字)",
+                font=('微软雅黑', 10, 'bold')).pack(side=LEFT)
+        
+        # 总计统计
+        total_frame = tb.Frame(stats_frame)
+        total_frame.pack(fill=X, pady=5)
+        
+        tb.Label(total_frame, text="总计翻译：", font=('微软雅黑', 10)).pack(side=LEFT)
+        tb.Label(total_frame,
+                text=f"{stats['total_translations']}次 ({stats['total_characters']}字)",
+                font=('微软雅黑', 10, 'bold')).pack(side=LEFT)
 class HistoryTabManager:
     def __init__(self, notebook, settings_manager):
         self.notebook = notebook
@@ -631,14 +660,11 @@ class UIManager:
             self.root.style.configure('TNotebook', tabposition='nw')
             self.root.style.configure('TNotebook.Tab', padding=[20, 10])
             
-            # 创建圆角效果的容器
-            self.main_container = tb.Frame(self.root, bootstyle=PRIMARY)
-            self.main_container.pack(fill=BOTH, expand=True, padx=2, pady=2)
             # 创建主要UI组件
             self.title_bar_manager.setup()
             
             # 修改主容器，去除内边距
-            main_container = tb.Frame(self.root)
+            main_container = tb.Frame(self.title_bar_manager.main_frame)
             main_container.pack(fill=BOTH, expand=True)
 
             # 添加内边距到notebook
@@ -874,15 +900,15 @@ class UIManager:
             self.translate_tab_manager.target_text.text.insert("1.0", result)
             self.translate_tab_manager.target_text.text.configure(state='disabled')
 
-            # 添加到历史记录
+            # 更新统计
             source_text = self.translate_tab_manager.source_text.get("1.0", "end").strip()
+            self.update_translation_stats(source_text)
+
+            # 添加到历史记录
             from_lang = self.translate_tab_manager.source_lang.get()
             to_lang = self.translate_tab_manager.target_lang.get()
-
             self.translator.cache.add_to_history(source_text, result, from_lang, to_lang)
-            history = {k: v for k, v in self.translator.cache._history.items()}
-            self.settings_manager.save_translation_history(history)
-
+            
             # 更新历史记录显示
             if self.history_tab_manager:
                 self.history_tab_manager.load_history()
@@ -1126,6 +1152,29 @@ class UIManager:
         except Exception as e:
             logging.error(f"朗读失败: {str(e)}")
             Messagebox.show_error("错误", f"朗读失败: {str(e)}")
+    def update_translation_stats(self, source_text):
+        """更新翻译统计"""
+        try:
+            stats = self.settings_manager.load_translation_stats()
+            stats['total_translations'] = int(stats.get('total_translations', 0)) + 1
+            stats['total_characters'] = int(stats.get('total_characters', 0)) + len(source_text)
+            stats['daily_translations'] = int(stats.get('daily_translations', 0)) + 1
+            stats['daily_characters'] = int(stats.get('daily_characters', 0)) + len(source_text)
+            self.settings_manager.save_translation_stats(stats)
+            self._update_stats_display(stats)
+        except Exception as e:
+            logging.error(f"更新翻译统计失败: {str(e)}")
+
+    def _update_stats_display(self, stats):
+        """更新统计显示"""
+        try:
+            if hasattr(self, 'stats_label'):
+                self.stats_label.config(
+                    text=f"今日翻译: {stats['daily_translations']}次 ({stats['daily_characters']}字) | "
+                        f"总计: {stats['total_translations']}次 ({stats['total_characters']}字)"
+                )
+        except Exception as e:
+            logging.error(f"更新统计显示失败: {str(e)}")
 class TabManager:
     def __init__(self, notebook, settings_manager):
         self.notebook = notebook

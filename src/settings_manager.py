@@ -354,6 +354,65 @@ class SettingsManager:
         except Exception as e:
             logging.error(f"加载翻译历史失败: {str(e)}")
             return {}
+    def save_translation_stats(self, stats):
+        """保存翻译统计数据"""
+        try:
+            config = configparser.ConfigParser()
+            config.read(self.config_manager.config_file, encoding='utf-8')
+            config['Stats'] = stats
+            
+            temp_file = self.config_manager.config_file + '.tmp'
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                config.write(f)
+            os.replace(temp_file, self.config_manager.config_file)
+            return True
+        except Exception as e:
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
+            logging.error(f"保存翻译统计失败: {str(e)}")
+            return False
+
+    def load_translation_stats(self):
+        """加载翻译统计数据"""
+        try:
+            if not os.path.exists(self.config_manager.config_file):
+                return {
+                    'total_translations': 0,
+                    'total_characters': 0,
+                    'daily_translations': 0,
+                    'daily_characters': 0,
+                    'last_reset_date': time.strftime('%Y-%m-%d')
+                }
+            
+            config = configparser.ConfigParser()
+            config.read(self.config_manager.config_file, encoding='utf-8')
+            
+            if 'Stats' in config:
+                stats = dict(config['Stats'])
+                # 检查是否需要重置每日统计
+                current_date = time.strftime('%Y-%m-%d')
+                if stats.get('last_reset_date') != current_date:
+                    stats['daily_translations'] = 0
+                    stats['daily_characters'] = 0
+                    stats['last_reset_date'] = current_date
+                    self.save_translation_stats(stats)
+                return stats
+            return {
+                'total_translations': 0,
+                'total_characters': 0,
+                'daily_translations': 0,
+                'daily_characters': 0,
+                'last_reset_date': time.strftime('%Y-%m-%d')
+            }
+        except Exception as e:
+            logging.error(f"加载翻译统计失败: {str(e)}")
+            return {
+                'total_translations': 0,
+                'total_characters': 0,
+                'daily_translations': 0,
+                'daily_characters': 0,
+                'last_reset_date': time.strftime('%Y-%m-%d')
+            }
 class BaseConfigManager:
     def __init__(self, config_file):
         self.config_file = config_file
