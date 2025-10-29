@@ -390,10 +390,13 @@ class AboutTabManager:
         feature_frame = tb.LabelFrame(parent, text="主要功能", padding=20, bootstyle=INFO)
         feature_frame.pack(fill=X, pady=5)
 
+        # 创建功能行容器
+        feature_row = tb.Frame(feature_frame)
+        feature_row.pack()
+        
         # 功能列表
         for i, feature in enumerate(version_info['features']):
-            tb.Label(feature_frame, text=feature, font=('微软雅黑', 9)).grid(
-                row=i//2, column=i%2, padx=5, pady=2, sticky='w')
+            tb.Label(feature_row, text=feature, font=('微软雅黑', 9)).pack(side=LEFT, padx=10)
 
     def _open_link(self, url):
         """打开链接"""
