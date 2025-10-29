@@ -82,6 +82,10 @@ class StatsManager:
         stats['daily_characters'] = int(stats.get('daily_characters', 0)) + len(source_text)
         self.settings_manager.save_translation_stats(stats)
         return stats
+        
+    def get_stats(self):
+        """获取统计数据"""
+        return self.settings_manager.load_translation_stats()
 class TitleBarManager:
     def __init__(self, root):
         self.root = root
@@ -1158,7 +1162,14 @@ class UIManager:
         time.sleep(0.2)  # 短暂延迟以显示确认效果
         
         selected_area = screenshot.crop((x, y, x + width, y + height))
-        temp_image = os.path.join('data', 'temp_screenshot.png')
+        
+        # 确保data目录存在
+        base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        data_dir = os.path.join(base_path, 'data')
+        if not os.path.exists(data_dir):
+            os.makedirs(data_dir)
+        
+        temp_image = os.path.join(data_dir, 'temp_screenshot.png')
         selected_area.save(temp_image)
         
         selector.destroy()
@@ -1337,7 +1348,14 @@ class UIManager:
         try:
             from docx import Document
             from tkinter import filedialog
+            import sys
             
+            # 处理打包后的路径问题
+            if getattr(sys, 'frozen', False):
+                base_path = sys._MEIPASS
+            else:
+                base_path = os.path.dirname(os.path.abspath(__file__))
+                
             file_path = filedialog.asksaveasfilename(
                 defaultextension=".docx",
                 filetypes=[("Word files", "*.docx"), ("All files", "*.*")]
@@ -1351,6 +1369,8 @@ class UIManager:
                 doc.add_paragraph(target_text)
                 doc.save(file_path)
                 Messagebox.show_info("成功", "导出成功")
+        except ImportError as e:
+            Messagebox.show_error("错误", "导出Word文档需要安装python-docx库")
         except Exception as e:
             logging.error(f"导出Word文档失败: {str(e)}")
             Messagebox.show_error("错误", f"导出Word文档失败: {str(e)}")
