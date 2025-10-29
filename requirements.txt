@@ -1,0 +1,6 @@
+ttkbootstrap==1.14.2
+requests==2.32.5
+Pillow==10.4.0
+pytesseract==0.3.13
+pyttsx3==2.99
+PyAutoGUI==0.9.54

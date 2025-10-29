@@ -226,29 +226,3 @@ class BaiduTranslator:
             self.tts_engine.runAndWait()
         except Exception as e:
             logging.error(f"语音朗读线程执行失败: {str(e)}")
-class CacheManager:
-    def __init__(self, max_size=1000, timeout=7200):
-        self._cache = OrderedDict()
-        self._cache_size = max_size
-        self._cache_timeout = timeout
-        self._lock = threading.Lock()
-        self._save_callback = None
-
-    def get(self, key):
-        with self._lock:
-            if key in self._cache:
-                cached_time, cached_result = self._cache[key]
-                if time.time() - cached_time < self._cache_timeout:
-                    self._cache.move_to_end(key)
-                    return cached_result
-                else:
-                    del self._cache[key]
-            return None
-
-    def set(self, key, value):
-        with self._lock:
-            current_time = time.time()
-            if len(self._cache) >= self._cache_size:
-                self._cache.popitem(last=False)
-            self._cache[key] = (current_time, value)
-            self._cache.move_to_end(key)

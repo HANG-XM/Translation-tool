@@ -1346,7 +1346,7 @@ class UIManager:
     def _export_docx(self, source_text, target_text):
         """导出为Word文档"""
         try:
-            from docx import Document
+            from docx import Document  # 改为按需导入
             from tkinter import filedialog
             import sys
             

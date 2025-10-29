@@ -26,8 +26,19 @@ def build():
         # 创建dist目录
         os.makedirs('dist', exist_ok=True)
         
-        # 执行打包命令
-        cmd = f'pyinstaller --noconfirm --onefile --noconsole --icon=resources/icon.ico --add-data "src/version_config.py;." --add-data "resources;resources" src/main.py'
+        # 执行打包命令，添加优化参数
+        cmd = ('pyinstaller --noconfirm --onefile --noconsole '
+               '--icon=resources/icon.ico '
+               '--add-data "src/version_config.py;." '
+               '--add-data "resources;resources" '
+               '--exclude-module pandas '
+               '--exclude-module numpy '
+               '--exclude-module openpyxl '
+               '--exclude-module docx '
+               '--exclude-module coverage '
+               '--strip '  # 移除调试符号
+               '--upx-dir upx '  # 使用UPX压缩
+               'src/main.py')
         print(f"执行打包命令: {cmd}")
         result = os.system(cmd)
         
