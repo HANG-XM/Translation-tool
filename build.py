@@ -36,8 +36,11 @@ def build():
                '--exclude-module openpyxl '
                '--exclude-module docx '
                '--exclude-module coverage '
-               '--strip '  # 移除调试符号
-               '--upx-dir upx '  # 使用UPX压缩
+               '--exclude-module matplotlib '  # 排除matplotlib
+               '--exclude-module scipy '  # 排除scipy
+               '--noupx '  # 禁用UPX压缩以避免strip问题
+               '--clean '  # 清理临时文件
+               '--noconfirm '  # 覆盖输出
                'src/main.py')
         print(f"执行打包命令: {cmd}")
         result = os.system(cmd)
@@ -57,6 +60,7 @@ def build():
     except Exception as e:
         print(f"打包失败: {str(e)}")
         sys.exit(1)
+
 
 if __name__ == '__main__':
     build()
