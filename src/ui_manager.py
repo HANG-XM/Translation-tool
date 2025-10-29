@@ -218,16 +218,184 @@ class TranslateTabManager:
                             bootstyle=INFO, width=10)
         self.capture_btn.grid(row=0, column=2, padx=6, pady=2, sticky="ew")
 
-        # 添加朗读按钮
         self.speak_btn = tb.Button(button_grid, text="🔊 朗读",
                             bootstyle=SUCCESS, width=10)
         self.speak_btn.grid(row=0, column=3, padx=6, pady=2, sticky="ew")
+
+        # 添加导出按钮
+        self.export_btn = tb.Button(button_grid, text="📄 导出",
+                                bootstyle=INFO, width=10)
+        self.export_btn.grid(row=0, column=4, padx=6, pady=2, sticky="ew")
 
         button_grid.columnconfigure(0, weight=1)
         button_grid.columnconfigure(1, weight=1)
         button_grid.columnconfigure(2, weight=1)
         button_grid.columnconfigure(3, weight=1)
+        button_grid.columnconfigure(4, weight=1)
+    def export_translation(self):
+        """导出翻译结果"""
+        try:
+            source_text = self.translate_tab_manager.source_text.get("1.0", "end").strip()
+            target_text = self.translate_tab_manager.target_text.get("1.0", "end").strip()
+            
+            if not source_text or not target_text:
+                Messagebox.show_warning("警告", "没有可导出的内容")
+                return
+                
+            # 创建导出选项窗口
+            export_window = tb.Toplevel(self.root)
+            export_window.title("导出翻译")
+            export_window.geometry("300x200")
+            export_window.transient(self.root)
+            export_window.grab_set()
+            
+            # 创建格式选择
+            format_frame = tb.LabelFrame(export_window, text="选择导出格式", padding=10)
+            format_frame.pack(fill=X, padx=20, pady=10)
+            
+            format_var = tb.StringVar(value="txt")
+            formats = [
+                ("纯文本 (.txt)", "txt"),
+                ("Word文档 (.docx)", "docx"),
+                ("PDF文档 (.pdf)", "pdf"),
+                ("JSON (.json)", "json")
+            ]
+            
+            for text, value in formats:
+                tb.Radiobutton(format_frame, text=text, variable=format_var, 
+                            value=value).pack(anchor="w", pady=2)
+            
+            # 添加确认按钮
+            def do_export():
+                format = format_var.get()
+                if format == "txt":
+                    self._export_txt(source_text, target_text)
+                elif format == "docx":
+                    self._export_docx(source_text, target_text)
+                elif format == "pdf":
+                    self._export_pdf(source_text, target_text)
+                elif format == "json":
+                    self._export_json(source_text, target_text)
+                export_window.destroy()
+                
+            tb.Button(export_window, text="导出", bootstyle=SUCCESS,
+                    command=do_export).pack(pady=10)
+                    
+        except Exception as e:
+            logging.error(f"导出失败: {str(e)}")
+            Messagebox.show_error("错误", f"导出失败: {str(e)}")
 
+    def _export_txt(self, source_text, target_text):
+        """导出为纯文本"""
+        try:
+            from tkinter import filedialog
+            file_path = filedialog.asksaveasfilename(
+                defaultextension=".txt",
+                filetypes=[("Text files", "*.txt"), ("All files", "*.*")]
+            )
+            if file_path:
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(f"原文：\n{source_text}\n\n译文：\n{target_text}")
+                Messagebox.show_info("成功", "导出成功")
+        except Exception as e:
+            logging.error(f"导出文本失败: {str(e)}")
+            Messagebox.show_error("错误", f"导出文本失败: {str(e)}")
+
+    def _export_docx(self, source_text, target_text):
+        """导出为Word文档"""
+        try:
+            from docx import Document
+            from tkinter import filedialog
+            
+            file_path = filedialog.asksaveasfilename(
+                defaultextension=".docx",
+                filetypes=[("Word files", "*.docx"), ("All files", "*.*")]
+            )
+            if file_path:
+                doc = Document()
+                doc.add_heading('翻译结果', 0)
+                doc.add_heading('原文', level=1)
+                doc.add_paragraph(source_text)
+                doc.add_heading('译文', level=1)
+                doc.add_paragraph(target_text)
+                doc.save(file_path)
+                Messagebox.show_info("成功", "导出成功")
+        except Exception as e:
+            logging.error(f"导出Word文档失败: {str(e)}")
+            Messagebox.show_error("错误", f"导出Word文档失败: {str(e)}")
+
+    def _export_pdf(self, source_text, target_text):
+        """导出为PDF文档"""
+        try:
+            from reportlab.pdfgen import canvas
+            from reportlab.lib.pagesizes import letter
+            from reportlab.pdfbase import pdfmetrics
+            from reportlab.pdfbase.ttfonts import TTFont
+            from tkinter import filedialog
+            
+            file_path = filedialog.asksaveasfilename(
+                defaultextension=".pdf",
+                filetypes=[("PDF files", "*.pdf"), ("All files", "*.*")]
+            )
+            if file_path:
+                c = canvas.Canvas(file_path, pagesize=letter)
+                # 注册中文字体
+                try:
+                    pdfmetrics.registerFont(TTFont('SimSun', 'SimSun.ttf'))
+                    text_font = 'SimSun'
+                except:
+                    text_font = 'Helvetica'
+                
+                # 添加原文
+                c.setFont(text_font, 12)
+                c.drawString(100, 750, "原文：")
+                y = 730
+                for line in source_text.split('\n'):
+                    c.drawString(100, y, line)
+                    y -= 20
+                    if y < 50:
+                        c.showPage()
+                        y = 750
+                
+                # 添加译文
+                y -= 40
+                c.drawString(100, y, "译文：")
+                y -= 20
+                for line in target_text.split('\n'):
+                    c.drawString(100, y, line)
+                    y -= 20
+                    if y < 50:
+                        c.showPage()
+                        y = 750
+                
+                c.save()
+                Messagebox.show_info("成功", "导出成功")
+        except Exception as e:
+            logging.error(f"导出PDF失败: {str(e)}")
+            Messagebox.show_error("错误", f"导出PDF失败: {str(e)}")
+
+    def _export_json(self, source_text, target_text):
+        """导出为JSON"""
+        try:
+            import json
+            from tkinter import filedialog
+            
+            file_path = filedialog.asksaveasfilename(
+                defaultextension=".json",
+                filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
+            )
+            if file_path:
+                data = {
+                    "source_text": source_text,
+                    "target_text": target_text,
+                    "timestamp": time.strftime('%Y-%m-%d %H:%M:%S')
+                }
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+                Messagebox.show_info("成功", "导出成功")
+        except Exception as e:
+            logging.error(f"导出JSON失败: {str(e)}")
+            Messagebox.show_error("错误", f"导出JSON失败: {str(e)}")
 class ConfigTabManager:
     def __init__(self, notebook, settings_manager):
         self.notebook = notebook
@@ -728,7 +896,8 @@ class UIManager:
         self.translate_tab_manager.translate_btn.configure(command=self.translate)
         self.translate_tab_manager.clear_btn.configure(command=self.clear_text)
         self.translate_tab_manager.capture_btn.configure(command=self.capture_translate)
-        self.translate_tab_manager.speak_btn.configure(command=self.speak_text)  # 添加朗读按钮事件
+        self.translate_tab_manager.speak_btn.configure(command=self.speak_text)
+        self.translate_tab_manager.export_btn.configure(command=self.export_translation)  # 添加导出按钮事件
         self.config_tab_manager.save_btn.configure(command=self.save_config)
 
         # 绑定快捷键
