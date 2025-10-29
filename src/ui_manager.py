@@ -325,8 +325,9 @@ class ConfigTabManager:
         self.capture_shortcut.insert(0, shortcuts.get('capture', '<Control-s>'))
 
 class AboutTabManager:
-    def __init__(self, notebook):
+    def __init__(self, notebook, settings_manager):
         self.notebook = notebook
+        self.settings_manager = settings_manager
         
     def setup(self):
         """设置关于标签页"""
@@ -695,7 +696,7 @@ class UIManager:
         """加载剩余标签页"""
         try:
             self.history_tab_manager = HistoryTabManager(self.notebook, self.settings_manager)
-            self.about_tab_manager = AboutTabManager(self.notebook)
+            self.about_tab_manager = AboutTabManager(self.notebook, self.settings_manager)
             
             self.history_tab_manager.setup()
             self.about_tab_manager.setup()
