@@ -342,6 +342,8 @@ class AboutTabManager:
         self._create_header(about_container, VERSION_INFO)
         # 创建信息卡片
         self._create_info_card(about_container, VERSION_INFO)
+        # 创建统计卡片
+        self._create_stats_card(about_container)
         # 创建功能说明
         self._create_features(about_container, VERSION_INFO)
 
