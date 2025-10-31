@@ -558,12 +558,14 @@ class HistoryTabManager(BaseUIComponent):
         # 操作按钮容器
         button_container = tb.Frame(toolbar)
         button_container.pack(side="right")
-        
         self.clear_btn = tb.Button(button_container, text="清空历史", 
                                 bootstyle=DANGER,
                                 command=self.clear_history)
         self.clear_btn.pack(padx=5, pady=5)
-
+        self.export_btn = tb.Button(button_container, text="导出历史", 
+                          bootstyle=INFO,
+                          command=self.export_history)
+        self.export_btn.pack(padx=5, pady=5)
         # 创建历史记录列表容器
         list_container = tb.Frame(history_frame)
         list_container.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
@@ -725,7 +727,181 @@ class HistoryTabManager(BaseUIComponent):
         if Messagebox.yesno("确认", "确定要清空所有历史记录吗？"):
             self.settings_manager.save_translation_history({})
             self.load_history()
+    def export_history(self):
+        """导出历史记录"""
+        try:
+            history = self.settings_manager.load_translation_history()
+            if not history:
+                Messagebox.show_warning("警告", "没有可导出的历史记录")
+                return
+                
+            # 创建导出选项窗口
+            export_window = tb.Toplevel(self.notebook)
+            export_window.title("导出历史记录")
+            export_window.geometry("300x260")
+            export_window.transient(self.notebook)
+            export_window.grab_set()
+            
+            # 创建格式选择
+            format_frame = tb.LabelFrame(export_window, text="选择导出格式", padding=10)
+            format_frame.pack(fill=X, padx=20, pady=10)
+            
+            format_var = tb.StringVar(value="txt")
+            formats = [
+                ("纯文本 (.txt)", "txt"),
+                ("Word文档 (.docx)", "docx"),
+                ("PDF文档 (.pdf)", "pdf"),
+                ("JSON (.json)", "json")
+            ]
+            
+            for text, value in formats:
+                tb.Radiobutton(format_frame, text=text, variable=format_var, 
+                            value=value).pack(anchor="w", pady=2)
+            
+            # 添加确认按钮
+            def do_export():
+                format = format_var.get()
+                if format == "txt":
+                    self._export_history_txt(history)
+                elif format == "docx":
+                    self._export_history_docx(history)
+                elif format == "pdf":
+                    self._export_history_pdf(history)
+                elif format == "json":
+                    self._export_history_json(history)
+                export_window.destroy()
+                
+            tb.Button(export_window, text="导出", bootstyle=SUCCESS,
+                    command=do_export).pack(pady=10)
+                    
+        except Exception as e:
+            logging.error(f"导出历史记录失败: {str(e)}")
+            Messagebox.show_error("错误", f"导出历史记录失败: {str(e)}")
+    def _export_history_txt(self, history):
+        """导出历史记录为纯文本"""
+        try:
+            from tkinter import filedialog
+            file_path = filedialog.asksaveasfilename(
+                defaultextension=".txt",
+                filetypes=[("Text files", "*.txt"), ("All files", "*.*")]
+            )
+            if file_path:
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    for item in history.values():
+                        f.write(f"时间: {item['time']}\n")
+                        f.write(f"语言: {item['from_lang']} -> {item['to_lang']}\n")
+                        f.write(f"原文:\n{item['source_text']}\n")
+                        f.write(f"译文:\n{item['target_text']}\n")
+                        f.write("-" * 50 + "\n")
+                Messagebox.show_info("成功", "导出成功")
+        except Exception as e:
+            logging.error(f"导出文本失败: {str(e)}")
+            Messagebox.show_error("错误", f"导出文本失败: {str(e)}")
 
+    def _export_history_docx(self, history):
+        """导出历史记录为Word文档"""
+        try:
+            from docx import Document
+            from tkinter import filedialog
+            
+            file_path = filedialog.asksaveasfilename(
+                defaultextension=".docx",
+                filetypes=[("Word files", "*.docx"), ("All files", "*.*")]
+            )
+            if file_path:
+                doc = Document()
+                doc.add_heading('翻译历史记录', 0)
+                
+                for item in history.values():
+                    doc.add_heading(f"时间: {item['time']}", level=1)
+                    doc.add_paragraph(f"语言: {item['from_lang']} -> {item['to_lang']}")
+                    doc.add_heading('原文', level=2)
+                    doc.add_paragraph(item['source_text'])
+                    doc.add_heading('译文', level=2)
+                    doc.add_paragraph(item['target_text'])
+                    doc.add_paragraph("-" * 50)
+                
+                doc.save(file_path)
+                Messagebox.show_info("成功", "导出成功")
+        except ImportError:
+            Messagebox.show_error("错误", "导出Word文档需要安装python-docx库")
+        except Exception as e:
+            logging.error(f"导出Word文档失败: {str(e)}")
+            Messagebox.show_error("错误", f"导出Word文档失败: {str(e)}")
+
+    def _export_history_pdf(self, history):
+        """导出历史记录为PDF文档"""
+        try:
+            from reportlab.pdfgen import canvas
+            from reportlab.lib.pagesizes import letter
+            from tkinter import filedialog
+            
+            file_path = filedialog.asksaveasfilename(
+                defaultextension=".pdf",
+                filetypes=[("PDF files", "*.pdf"), ("All files", "*.*")]
+            )
+            if file_path:
+                c = canvas.Canvas(file_path, pagesize=letter)
+                c.setFont("Helvetica", 12)
+                
+                y = 750
+                for item in history.values():
+                    if y < 100:  # 换页
+                        c.showPage()
+                        y = 750
+                    
+                    c.drawString(100, y, f"时间: {item['time']}")
+                    y -= 20
+                    c.drawString(100, y, f"语言: {item['from_lang']} -> {item['to_lang']}")
+                    y -= 20
+                    
+                    lines = item['source_text'].split('\n')
+                    c.drawString(100, y, "原文:")
+                    y -= 20
+                    for line in lines:
+                        if y < 100:
+                            c.showPage()
+                            y = 750
+                        c.drawString(100, y, line)
+                        y -= 20
+                    
+                    lines = item['target_text'].split('\n')
+                    c.drawString(100, y, "译文:")
+                    y -= 20
+                    for line in lines:
+                        if y < 100:
+                            c.showPage()
+                            y = 750
+                        c.drawString(100, y, line)
+                        y -= 20
+                    
+                    y -= 20
+                    c.drawString(100, y, "-" * 50)
+                    y -= 30
+                
+                c.save()
+                Messagebox.show_info("成功", "导出成功")
+        except Exception as e:
+            logging.error(f"导出PDF失败: {str(e)}")
+            Messagebox.show_error("错误", f"导出PDF失败: {str(e)}")
+
+    def _export_history_json(self, history):
+        """导出历史记录为JSON"""
+        try:
+            import json
+            from tkinter import filedialog
+            
+            file_path = filedialog.asksaveasfilename(
+                defaultextension=".json",
+                filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
+            )
+            if file_path:
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    json.dump(history, f, ensure_ascii=False, indent=2)
+                Messagebox.show_info("成功", "导出成功")
+        except Exception as e:
+            logging.error(f"导出JSON失败: {str(e)}")
+            Messagebox.show_error("错误", f"导出JSON失败: {str(e)}")
 class UIManager:
     def __init__(self, root, settings_manager):
         self.root = root
