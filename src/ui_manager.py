@@ -7,7 +7,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 import os
 import time
-from translator import BaiduTranslator
+from translator import BaiduTranslator, TextFormatter
 import tkinter as tk
 import queue
 import pyautogui
@@ -312,6 +312,26 @@ class TranslateTabManager(BaseUIComponent):
         self.export_btn = tb.Button(button_grid, text="📄 导出",
                                 bootstyle=INFO, width=10)
         self.export_btn.grid(row=0, column=4, padx=6, pady=2, sticky="ew")
+
+        # 添加格式化选项
+        format_frame = tb.LabelFrame(bottom_toolbar, text="格式化选项", padding=6, bootstyle=INFO)
+        format_frame.pack(side=TOP, padx=0, pady=(5,0), fill=X)
+
+        format_grid = tb.Frame(format_frame)
+        format_grid.pack(fill=X)
+
+        self.format_var = tb.StringVar(value="none")
+        formats = [
+            ("无格式", "none"),
+            ("保留换行", "keep_newline"),
+            ("添加标点", "add_punctuation"),
+            ("首字母大写", "capitalize"),
+            ("每句换行", "sentence_newline")
+        ]
+        
+        for i, (text, value) in enumerate(formats):
+            tb.Radiobutton(format_grid, text=text, variable=self.format_var, 
+                        value=value).grid(row=i//3, column=i%3, padx=5, pady=2, sticky="w")
 
         button_grid.columnconfigure(0, weight=1)
         button_grid.columnconfigure(1, weight=1)
@@ -1155,9 +1175,14 @@ class UIManager:
     def _update_result(self, result):
         """更新翻译结果"""
         try:
+            # 获取格式化选项
+            format_type = self.translate_tab_manager.format_var.get()
+            # 应用格式化
+            formatted_result = TextFormatter.format_text(result, format_type)
+            
             self.translate_tab_manager.target_text.text.configure(state='normal')
             self.translate_tab_manager.target_text.text.delete("1.0", "end")
-            self.translate_tab_manager.target_text.text.insert("1.0", result)
+            self.translate_tab_manager.target_text.text.insert("1.0", formatted_result)
             self.translate_tab_manager.target_text.text.configure(state='disabled')
 
             # 更新统计
@@ -1167,7 +1192,7 @@ class UIManager:
             # 添加到历史记录
             from_lang = self.translate_tab_manager.source_lang.get()
             to_lang = self.translate_tab_manager.target_lang.get()
-            self.translator.cache.add_to_history(source_text, result, from_lang, to_lang)
+            self.translator.cache.add_to_history(source_text, formatted_result, from_lang, to_lang)
             
             # 更新历史记录显示
             if self.history_tab_manager:

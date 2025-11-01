@@ -226,3 +226,28 @@ class BaiduTranslator:
             self.tts_engine.runAndWait()
         except Exception as e:
             logging.error(f"语音朗读线程执行失败: {str(e)}")
+class TextFormatter:
+    """文本格式化工具"""
+    @staticmethod
+    def format_text(text, format_type):
+        """根据类型格式化文本"""
+        if not text:
+            return text
+            
+        if format_type == "keep_newline":
+            return text.replace(" ", "\n")
+        elif format_type == "add_punctuation":
+            # 在句末添加标点
+            sentences = text.split("。")
+            for i, sentence in enumerate(sentences):
+                if sentence and not sentence.endswith(("。", "！", "？", ".", "!", "?")):
+                    sentences[i] = sentence + "。"
+            return "".join(sentences)
+        elif format_type == "capitalize":
+            # 首字母大写
+            return text[0].upper() + text[1:] if text else text
+        elif format_type == "sentence_newline":
+            # 每句换行
+            sentences = text.split("。")
+            return "。\n".join(s.strip() for s in sentences if s.strip())
+        return text
