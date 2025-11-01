@@ -243,7 +243,7 @@ class SettingsManager:
         """设置主题"""
         self.theme_manager.set_theme(theme)
 
-    def save_all_config(self, appid, appkey, shortcuts, theme, source_lang=None, target_lang=None, format_type=None):
+    def save_all_config(self, appid, appkey, shortcuts, theme, source_lang=None, target_lang=None, format_type=None, export_format=None):
         """保存所有配置"""
         try:
             config = configparser.ConfigParser()
@@ -257,6 +257,8 @@ class SettingsManager:
                 }
             if format_type:
                 config['Format'] = {'format_type': format_type}
+            if export_format:
+                config['Export'] = {'export_format': export_format}
             
             temp_file = self.config_manager.config_file + '.tmp'
             with open(temp_file, 'w', encoding='utf-8') as f:
@@ -270,6 +272,22 @@ class SettingsManager:
             if os.path.exists(temp_file):
                 os.remove(temp_file)
             raise e
+
+    def load_export_format(self):
+        """加载导出格式配置"""
+        try:
+            if not os.path.exists(self.config_manager.config_file):
+                return 'txt'
+            
+            config = configparser.ConfigParser()
+            config.read(self.config_manager.config_file, encoding='utf-8')
+            
+            if 'Export' in config:
+                return config['Export'].get('export_format', 'txt')
+            return 'txt'
+        except Exception as e:
+            logging.error(f"加载导出格式配置失败: {str(e)}")
+            return 'txt'
 
     def load_format_type(self):
         """加载格式化配置"""

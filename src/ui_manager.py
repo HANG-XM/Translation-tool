@@ -350,6 +350,7 @@ class ConfigTabManager(BaseUIComponent):
         self._create_api_settings(left_panel)
         self._create_shortcut_settings(left_panel)
         self._create_format_settings(left_panel)
+        self._create_export_settings(left_panel)
         self._create_save_button(right_panel)
 
     def _create_theme_settings(self, parent):
@@ -419,6 +420,20 @@ class ConfigTabManager(BaseUIComponent):
         for i, (text, value) in enumerate(formats):
             tb.Radiobutton(format_frame, text=text, variable=self.format_var, 
                         value=value).grid(row=i, column=0, padx=5, pady=2, sticky="w")
+
+    def _create_export_settings(self, parent):
+        """创建导出设置区域"""
+        export_frame = tb.LabelFrame(parent, text="导出设置", padding=15, bootstyle=INFO)
+        export_frame.pack(fill=X, padx=5, pady=5)
+        export_frame.columnconfigure(1, weight=1)
+
+        tb.Label(export_frame, text="默认导出格式:", font=('微软雅黑', 9)).grid(
+            row=0, column=0, sticky="w", padx=5, pady=2)
+        self.export_format_var = tb.StringVar(value="txt")
+        export_formats = tb.Combobox(export_frame, textvariable=self.export_format_var,
+                                    width=12, state="readonly", bootstyle=PRIMARY)
+        export_formats['values'] = ('txt', 'docx', 'pdf', 'json')
+        export_formats.grid(row=0, column=1, padx=5, pady=2, sticky="w")
 
     def _create_save_button(self, parent):
         """创建保存按钮"""
@@ -1058,12 +1073,15 @@ class UIManager:
             # 保存格式化配置
             format_type = self.config_tab_manager.format_var.get()
             
+            # 保存导出格式配置
+            export_format = self.config_tab_manager.export_format_var.get()
+            
             # 保存语言配置
             source_lang = self.translate_tab_manager.source_lang.get()
             target_lang = self.translate_tab_manager.target_lang.get()
 
             # 保存所有配置
-            if self.settings_manager.save_all_config(appid, appkey, shortcuts, theme, source_lang, target_lang, format_type):
+            if self.settings_manager.save_all_config(appid, appkey, shortcuts, theme, source_lang, target_lang, format_type, export_format):
                 self.translator = BaiduTranslator(appid, appkey)
                 # 设置保存回调
                 self.translator.cache.save_callback = self.settings_manager.save_translation_history
