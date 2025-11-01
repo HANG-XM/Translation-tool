@@ -558,14 +558,18 @@ class HistoryTabManager(BaseUIComponent):
         # 操作按钮容器
         button_container = tb.Frame(toolbar)
         button_container.pack(side="right")
+        self.export_var = tb.StringVar()
+        self.export_combo = tb.Combobox(button_container, textvariable=self.export_var, 
+                                        width=10, state="readonly", bootstyle=INFO)
+        self.export_combo['values'] = ('导出TXT', '导出Word', '导出PDF', '导出JSON')
+        self.export_combo.set('导出格式')
+        self.export_combo.pack(padx=5, pady=5)
+        self.export_combo.bind('<<ComboboxSelected>>', self._on_export_selected)
+
         self.clear_btn = tb.Button(button_container, text="清空历史", 
                                 bootstyle=DANGER,
                                 command=self.clear_history)
         self.clear_btn.pack(padx=5, pady=5)
-        self.export_btn = tb.Button(button_container, text="导出历史", 
-                          bootstyle=INFO,
-                          command=self.export_history)
-        self.export_btn.pack(padx=5, pady=5)
         # 创建历史记录列表容器
         list_container = tb.Frame(history_frame)
         list_container.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
@@ -727,56 +731,33 @@ class HistoryTabManager(BaseUIComponent):
         if Messagebox.yesno("确认", "确定要清空所有历史记录吗？"):
             self.settings_manager.save_translation_history({})
             self.load_history()
-    def export_history(self):
-        """导出历史记录"""
+    def _on_export_selected(self, event):
+        """处理导出格式选择"""
         try:
+            format = self.export_var.get()
+            if format == '导出格式':
+                return
+                
             history = self.settings_manager.load_translation_history()
             if not history:
                 Messagebox.show_warning("警告", "没有可导出的历史记录")
+                self.export_var.set('导出格式')
                 return
                 
-            # 创建导出选项窗口
-            export_window = tb.Toplevel(self.notebook)
-            export_window.title("导出历史记录")
-            export_window.geometry("300x260")
-            export_window.transient(self.notebook)
-            export_window.grab_set()
-            
-            # 创建格式选择
-            format_frame = tb.LabelFrame(export_window, text="选择导出格式", padding=10)
-            format_frame.pack(fill=X, padx=20, pady=10)
-            
-            format_var = tb.StringVar(value="txt")
-            formats = [
-                ("纯文本 (.txt)", "txt"),
-                ("Word文档 (.docx)", "docx"),
-                ("PDF文档 (.pdf)", "pdf"),
-                ("JSON (.json)", "json")
-            ]
-            
-            for text, value in formats:
-                tb.Radiobutton(format_frame, text=text, variable=format_var, 
-                            value=value).pack(anchor="w", pady=2)
-            
-            # 添加确认按钮
-            def do_export():
-                format = format_var.get()
-                if format == "txt":
-                    self._export_history_txt(history)
-                elif format == "docx":
-                    self._export_history_docx(history)
-                elif format == "pdf":
-                    self._export_history_pdf(history)
-                elif format == "json":
-                    self._export_history_json(history)
-                export_window.destroy()
+            if format == '导出TXT':
+                self._export_history_txt(history)
+            elif format == '导出Word':
+                self._export_history_docx(history)
+            elif format == '导出PDF':
+                self._export_history_pdf(history)
+            elif format == '导出JSON':
+                self._export_history_json(history)
                 
-            tb.Button(export_window, text="导出", bootstyle=SUCCESS,
-                    command=do_export).pack(pady=10)
-                    
+            self.export_var.set('导出格式')
         except Exception as e:
             logging.error(f"导出历史记录失败: {str(e)}")
             Messagebox.show_error("错误", f"导出历史记录失败: {str(e)}")
+            self.export_var.set('导出格式')
     def _export_history_txt(self, history):
         """导出历史记录为纯文本"""
         try:
