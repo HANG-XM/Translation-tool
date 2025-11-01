@@ -292,26 +292,31 @@ class TranslateTabManager(BaseUIComponent):
         button_grid = tb.Frame(button_frame)
         button_grid.pack(fill=X)
 
+        # 创建按钮并添加工具提示
         self.translate_btn = tb.Button(button_grid, text="🔤 翻译", 
                                     bootstyle=PRIMARY, width=10)
         self.translate_btn.grid(row=0, column=0, padx=6, pady=2, sticky="ew")
+        Tooltip(self.translate_btn, "翻译选中的文本 (Ctrl+Enter)")
 
         self.clear_btn = tb.Button(button_grid, text="🗑️ 清空",
                             bootstyle=WARNING, width=10)
         self.clear_btn.grid(row=0, column=1, padx=6, pady=2, sticky="ew")
+        Tooltip(self.clear_btn, "清空所有文本 (Ctrl+D)")
 
         self.capture_btn = tb.Button(button_grid, text="📷 截图翻译",
                             bootstyle=INFO, width=10)
         self.capture_btn.grid(row=0, column=2, padx=6, pady=2, sticky="ew")
+        Tooltip(self.capture_btn, "截图并翻译 (Ctrl+S)")
 
         self.speak_btn = tb.Button(button_grid, text="🔊 朗读",
                             bootstyle=SUCCESS, width=10)
         self.speak_btn.grid(row=0, column=3, padx=6, pady=2, sticky="ew")
+        Tooltip(self.speak_btn, "朗读翻译结果")
 
-        # 添加导出按钮
         self.export_btn = tb.Button(button_grid, text="📄 导出",
                                 bootstyle=INFO, width=10)
         self.export_btn.grid(row=0, column=4, padx=6, pady=2, sticky="ew")
+        Tooltip(self.export_btn, "导出翻译结果")
 
         button_grid.columnconfigure(0, weight=1)
         button_grid.columnconfigure(1, weight=1)
@@ -378,11 +383,25 @@ class ConfigTabManager(BaseUIComponent):
         api_frame = tb.LabelFrame(parent, text="百度翻译API", padding=8, bootstyle=INFO)
         api_frame.pack(fill=X, pady=5)
 
-        self.appid_entry = tb.Entry(api_frame, bootstyle=PRIMARY, font=('微软雅黑', 10))
-        self.appid_entry.pack(fill=X, pady=(0, 5))
+        # 添加提示文本
+        hint_label = tb.Label(api_frame, text="请输入百度翻译开放平台的API密钥",
+                            font=('微软雅黑', 9),
+                            bootstyle=INFO)
+        hint_label.pack(pady=(0, 5))
 
-        self.appkey_entry = tb.Entry(api_frame, show="*", bootstyle=PRIMARY, font=('微软雅黑', 10))
-        self.appkey_entry.pack(fill=X)
+        # API ID输入框
+        id_frame = tb.Frame(api_frame)
+        id_frame.pack(fill=X, pady=(0, 5))
+        tb.Label(id_frame, text="APP ID:", width=10).pack(side=LEFT)
+        self.appid_entry = tb.Entry(id_frame, bootstyle=PRIMARY, font=('微软雅黑', 10))
+        self.appid_entry.pack(side=LEFT, fill=X, expand=True)
+
+        # API Key输入框
+        key_frame = tb.Frame(api_frame)
+        key_frame.pack(fill=X)
+        tb.Label(key_frame, text="APP Key:", width=10).pack(side=LEFT)
+        self.appkey_entry = tb.Entry(key_frame, show="*", bootstyle=PRIMARY, font=('微软雅黑', 10))
+        self.appkey_entry.pack(side=LEFT, fill=X, expand=True)
 
     def _create_shortcut_settings(self, parent):
         """创建快捷键设置区域"""
@@ -1262,7 +1281,29 @@ class UIManager:
     def _show_error(self, error_msg):
         """显示错误信息"""
         try:
-            Messagebox.show_error("错误", error_msg)
+            error_window = tb.Toplevel(self.root)
+            error_window.title("错误提示")
+            error_window.geometry("400x200")
+            error_window.transient(self.root)
+            error_window.grab_set()
+
+            main_frame = tb.Frame(error_window)
+            main_frame.pack(fill=BOTH, expand=True, padx=20, pady=20)
+
+            error_icon = tb.Label(main_frame, text="⚠️", font=('微软雅黑', 24))
+            error_icon.pack(pady=(0, 10))
+
+            error_label = tb.Label(main_frame, text=error_msg, 
+                                font=('微软雅黑', 10))
+            error_label.pack(pady=10)
+
+            button_frame = tb.Frame(main_frame)
+            button_frame.pack(pady=(10, 0))
+
+            ok_btn = tb.Button(button_frame, text="确定", 
+                            bootstyle=PRIMARY,
+                            command=error_window.destroy)
+            ok_btn.pack()
         except Exception as e:
             logging.error(f"显示错误信息失败: {str(e)}")
         finally:
@@ -1276,11 +1317,13 @@ class UIManager:
                 self.translate_tab_manager.source_lang.configure(state='readonly')
                 self.translate_tab_manager.target_lang.configure(state='readonly')
                 self.translate_tab_manager.source_text.text.configure(state='normal')
+                self.root.config(cursor="arrow")
             else:
                 self.translate_tab_manager.translate_btn.configure(state='disabled')
                 self.translate_tab_manager.source_lang.configure(state='disabled')
                 self.translate_tab_manager.target_lang.configure(state='disabled')
                 self.translate_tab_manager.source_text.text.configure(state='disabled')
+                self.root.config(cursor="watch")
         except Exception as e:
             logging.error(f"设置控件状态失败: {str(e)}")
 
@@ -1689,3 +1732,26 @@ class UIManager:
         except Exception as e:
             logging.error(f"导出JSON失败: {str(e)}")
             Messagebox.show_error("错误", f"导出JSON失败: {str(e)}")
+class Tooltip:
+    def __init__(self, widget, text):
+        self.widget = widget
+        self.text = text
+        self.tooltip = None
+        self.widget.bind("<Enter>", self.on_enter)
+        self.widget.bind("<Leave>", self.on_leave)
+
+    def on_enter(self, event=None):
+        x, y, _, _ = self.widget.bbox("insert")
+        x += self.widget.winfo_rootx() + 25
+        y += self.widget.winfo_rooty() + 25
+        self.tooltip = tb.Toplevel(self.widget)
+        self.tooltip.wm_overrideredirect(True)
+        self.tooltip.wm_geometry(f"+{x}+{y}")
+        label = tb.Label(self.tooltip, text=self.text, 
+                        bootstyle=INFO, padding=5)
+        label.pack()
+
+    def on_leave(self, event=None):
+        if self.tooltip:
+            self.tooltip.destroy()
+            self.tooltip = None
