@@ -385,23 +385,37 @@ class ConfigTabManager(BaseUIComponent):
         shortcuts_frame = tb.LabelFrame(parent, text="快捷键设置", padding=8, bootstyle=INFO)
         shortcuts_frame.pack(fill=X, pady=5)
 
-        # 创建标签和输入框
-        tb.Label(shortcuts_frame, text="翻译:", font=('微软雅黑', 9)).pack(anchor="w", padx=5)
-        self.translate_shortcut = tb.Entry(shortcuts_frame, bootstyle=PRIMARY, font=('微软雅黑', 9))
-        self.translate_shortcut.pack(fill=X, pady=2)
+        # 创建两列布局
+        shortcuts_grid = tb.Frame(shortcuts_frame)
+        shortcuts_grid.pack(fill=X)
+        shortcuts_grid.columnconfigure(0, weight=1)
+        shortcuts_grid.columnconfigure(1, weight=1)
 
-        tb.Label(shortcuts_frame, text="清空:", font=('微软雅黑', 9)).pack(anchor="w", padx=5)
-        self.clear_shortcut = tb.Entry(shortcuts_frame, bootstyle=PRIMARY, font=('微软雅黑', 9))
-        self.clear_shortcut.pack(fill=X, pady=2)
+        # 第一行：翻译和清空
+        tb.Label(shortcuts_grid, text="翻译:", font=('微软雅黑', 9)).grid(row=0, column=0, sticky="w", padx=5, pady=2)
+        self.translate_shortcut = tb.Entry(shortcuts_grid, bootstyle=PRIMARY, font=('微软雅黑', 9))
+        self.translate_shortcut.grid(row=0, column=1, padx=5, pady=2, sticky="ew")
 
-        tb.Label(shortcuts_frame, text="截图翻译:", font=('微软雅黑', 9)).pack(anchor="w", padx=5)
-        self.capture_shortcut = tb.Entry(shortcuts_frame, bootstyle=PRIMARY, font=('微软雅黑', 9))
-        self.capture_shortcut.pack(fill=X, pady=2)
+        tb.Label(shortcuts_grid, text="清空:", font=('微软雅黑', 9)).grid(row=0, column=2, sticky="w", padx=5, pady=2)
+        self.clear_shortcut = tb.Entry(shortcuts_grid, bootstyle=PRIMARY, font=('微软雅黑', 9))
+        self.clear_shortcut.grid(row=0, column=3, padx=5, pady=2, sticky="ew")
+
+        # 第二行：截图翻译
+        tb.Label(shortcuts_grid, text="截图翻译:", font=('微软雅黑', 9)).grid(row=1, column=0, sticky="w", padx=5, pady=2)
+        self.capture_shortcut = tb.Entry(shortcuts_grid, bootstyle=PRIMARY, font=('微软雅黑', 9))
+        self.capture_shortcut.grid(row=1, column=1, columnspan=3, padx=5, pady=2, sticky="ew")
 
     def _create_format_settings(self, parent):
         """创建格式化设置区域"""
         format_frame = tb.LabelFrame(parent, text="格式化设置", padding=8, bootstyle=INFO)
         format_frame.pack(fill=X, pady=5)
+
+        # 创建三列布局
+        format_grid = tb.Frame(format_frame)
+        format_grid.pack(fill=X)
+        format_grid.columnconfigure(0, weight=1)
+        format_grid.columnconfigure(1, weight=1)
+        format_grid.columnconfigure(2, weight=1)
 
         self.format_var = tb.StringVar(value="none")
         formats = [
@@ -412,9 +426,15 @@ class ConfigTabManager(BaseUIComponent):
             ("每句换行", "sentence_newline")
         ]
         
-        for text, value in formats:
-            tb.Radiobutton(format_frame, text=text, variable=self.format_var, 
-                        value=value).pack(anchor="w", pady=1)
+        # 第一行：三个选项
+        for i, (text, value) in enumerate(formats[:3]):
+            tb.Radiobutton(format_grid, text=text, variable=self.format_var, 
+                        value=value).grid(row=0, column=i, padx=5, pady=2, sticky="w")
+        
+        # 第二行：剩余选项
+        for i, (text, value) in enumerate(formats[3:], start=3):
+            tb.Radiobutton(format_grid, text=text, variable=self.format_var, 
+                        value=value).grid(row=1, column=i-3, padx=5, pady=2, sticky="w")
 
     def _create_export_settings(self, parent):
         """创建导出设置区域"""
