@@ -336,77 +336,63 @@ class ConfigTabManager(BaseUIComponent):
         config_frame = tb.Frame(self.notebook)
         self.notebook.add(config_frame, text="⚙️ 配置")
 
+        # 创建主容器，使用pack布局
         main_container = tb.Frame(config_frame)
-        main_container.pack(padx=20, pady=10, fill=BOTH, expand=True)
-        main_container.columnconfigure(0, weight=1)
+        main_container.pack(fill=BOTH, expand=True, padx=10, pady=10)
 
-        left_panel = tb.Frame(main_container)
-        left_panel.grid(row=0, column=0, sticky="nsew")
+        # 创建左右两列
+        left_column = tb.Frame(main_container)
+        left_column.pack(side=LEFT, fill=BOTH, expand=True)
 
-        right_panel = tb.Frame(main_container)
-        right_panel.grid(row=0, column=1, sticky="ns", padx=(10, 0))
+        right_column = tb.Frame(main_container)
+        right_column.pack(side=RIGHT, fill=BOTH, padx=(10, 0))
 
-        self._create_theme_settings(left_panel)
-        self._create_api_settings(left_panel)
-        self._create_shortcut_settings(left_panel)
-        self._create_format_settings(left_panel)
-        self._create_export_settings(left_panel)
-        self._create_save_button(right_panel)
+        # 在左列中创建设置区域
+        self._create_theme_settings(left_column)
+        self._create_api_settings(left_column)
+        self._create_shortcut_settings(left_column)
+        self._create_format_settings(left_column)
+        self._create_export_settings(left_column)
+
+        # 在右列中创建保存按钮
+        self._create_save_button(right_column)
 
     def _create_theme_settings(self, parent):
         """创建主题设置区域"""
-        theme_frame = tb.LabelFrame(parent, text="界面主题", padding=10, bootstyle=INFO)
-        theme_frame.pack(fill="x", padx=5, pady=5)
-        theme_frame.columnconfigure(1, weight=1)
+        theme_frame = tb.LabelFrame(parent, text="界面主题", padding=8, bootstyle=INFO)
+        theme_frame.pack(fill=X, pady=(0, 5))
 
-        tb.Label(theme_frame, text="选择主题:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
         self.theme_var = tb.StringVar()
         self.theme_combo = tb.Combobox(theme_frame, width=10, state="readonly",
                                     textvariable=self.theme_var, bootstyle=PRIMARY)
         self.theme_combo['values'] = ('白天', '黑夜')
         self.theme_combo.set('白天')
-        self.theme_combo.grid(row=0, column=1, padx=5, pady=5, sticky="w")
+        self.theme_combo.pack(pady=5)
 
     def _create_api_settings(self, parent):
         """创建API设置区域"""
-        api_frame = tb.LabelFrame(parent, text="百度翻译API", padding=15, bootstyle=INFO)
-        api_frame.pack(fill="x", padx=5, pady=5)
-        api_frame.columnconfigure(1, weight=1)
+        api_frame = tb.LabelFrame(parent, text="百度翻译API", padding=8, bootstyle=INFO)
+        api_frame.pack(fill=X, pady=5)
 
-        tb.Label(api_frame, text="APPID:", font=('微软雅黑', 10)).grid(row=0, column=0, sticky="w", padx=5, pady=5)
         self.appid_entry = tb.Entry(api_frame, bootstyle=PRIMARY, font=('微软雅黑', 10))
-        self.appid_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+        self.appid_entry.pack(fill=X, pady=(0, 5))
 
-        tb.Label(api_frame, text="APPKEY:", font=('微软雅黑', 10)).grid(row=1, column=0, sticky="w", padx=5, pady=5)
         self.appkey_entry = tb.Entry(api_frame, show="*", bootstyle=PRIMARY, font=('微软雅黑', 10))
-        self.appkey_entry.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
+        self.appkey_entry.pack(fill=X)
 
     def _create_shortcut_settings(self, parent):
         """创建快捷键设置区域"""
-        shortcuts_frame = tb.LabelFrame(parent, text="快捷键设置", padding=15, bootstyle=INFO)
-        shortcuts_frame.pack(fill=X, padx=5, pady=5)
-        shortcuts_frame.columnconfigure(1, weight=1)
+        shortcuts_frame = tb.LabelFrame(parent, text="快捷键设置", padding=8, bootstyle=INFO)
+        shortcuts_frame.pack(fill=X, pady=5)
 
-        tb.Label(shortcuts_frame, text="翻译:", font=('微软雅黑', 9)).grid(
-            row=0, column=0, sticky="w", padx=5, pady=2)
-        self.translate_shortcut = tb.Entry(shortcuts_frame, bootstyle=PRIMARY, font=('微软雅黑', 9))
-        self.translate_shortcut.grid(row=0, column=1, padx=5, pady=2, sticky="ew")
-
-        tb.Label(shortcuts_frame, text="清空:", font=('微软雅黑', 9)).grid(
-            row=1, column=0, sticky="w", padx=5, pady=2)
-        self.clear_shortcut = tb.Entry(shortcuts_frame, bootstyle=PRIMARY, font=('微软雅黑', 9))
-        self.clear_shortcut.grid(row=1, column=1, padx=5, pady=2, sticky="ew")
-
-        tb.Label(shortcuts_frame, text="截图翻译:", font=('微软雅黑', 9)).grid(
-            row=2, column=0, sticky="w", padx=5, pady=2)
-        self.capture_shortcut = tb.Entry(shortcuts_frame, bootstyle=PRIMARY, font=('微软雅黑', 9))
-        self.capture_shortcut.grid(row=2, column=1, padx=5, pady=2, sticky="ew")
+        for text in ["翻译:", "清空:", "截图翻译:"]:
+            entry = tb.Entry(shortcuts_frame, bootstyle=PRIMARY, font=('微软雅黑', 9))
+            entry.pack(fill=X, pady=2)
 
     def _create_format_settings(self, parent):
         """创建格式化设置区域"""
-        format_frame = tb.LabelFrame(parent, text="格式化设置", padding=15, bootstyle=INFO)
-        format_frame.pack(fill=X, padx=5, pady=5)
-        format_frame.columnconfigure(1, weight=1)
+        format_frame = tb.LabelFrame(parent, text="格式化设置", padding=8, bootstyle=INFO)
+        format_frame.pack(fill=X, pady=5)
 
         self.format_var = tb.StringVar(value="none")
         formats = [
@@ -417,23 +403,20 @@ class ConfigTabManager(BaseUIComponent):
             ("每句换行", "sentence_newline")
         ]
         
-        for i, (text, value) in enumerate(formats):
+        for text, value in formats:
             tb.Radiobutton(format_frame, text=text, variable=self.format_var, 
-                        value=value).grid(row=i, column=0, padx=5, pady=2, sticky="w")
+                        value=value).pack(anchor="w", pady=1)
 
     def _create_export_settings(self, parent):
         """创建导出设置区域"""
-        export_frame = tb.LabelFrame(parent, text="导出设置", padding=15, bootstyle=INFO)
-        export_frame.pack(fill=X, padx=5, pady=5)
-        export_frame.columnconfigure(1, weight=1)
+        export_frame = tb.LabelFrame(parent, text="导出设置", padding=8, bootstyle=INFO)
+        export_frame.pack(fill=X, pady=5)
 
-        tb.Label(export_frame, text="默认导出格式:", font=('微软雅黑', 9)).grid(
-            row=0, column=0, sticky="w", padx=5, pady=2)
         self.export_format_var = tb.StringVar(value="txt")
         export_formats = tb.Combobox(export_frame, textvariable=self.export_format_var,
                                     width=12, state="readonly", bootstyle=PRIMARY)
         export_formats['values'] = ('txt', 'docx', 'pdf', 'json')
-        export_formats.grid(row=0, column=1, padx=5, pady=2, sticky="w")
+        export_formats.pack(pady=5)
 
     def _create_save_button(self, parent):
         """创建保存按钮"""
