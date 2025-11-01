@@ -558,18 +558,23 @@ class HistoryTabManager(BaseUIComponent):
         # 操作按钮容器
         button_container = tb.Frame(toolbar)
         button_container.pack(side="right")
+        # 创建水平排列的按钮框架
+        button_frame = tb.Frame(button_container)
+        button_frame.pack()
+        # 创建导出下拉框
         self.export_var = tb.StringVar()
-        self.export_combo = tb.Combobox(button_container, textvariable=self.export_var, 
+        self.export_combo = tb.Combobox(button_frame, textvariable=self.export_var, 
                                         width=10, state="readonly", bootstyle=INFO)
         self.export_combo['values'] = ('导出TXT', '导出Word', '导出PDF', '导出JSON')
         self.export_combo.set('导出格式')
-        self.export_combo.pack(padx=5, pady=5)
+        self.export_combo.pack(side="left", padx=5, pady=5)
         self.export_combo.bind('<<ComboboxSelected>>', self._on_export_selected)
 
-        self.clear_btn = tb.Button(button_container, text="清空历史", 
+        # 清空历史按钮
+        self.clear_btn = tb.Button(button_frame, text="清空历史", 
                                 bootstyle=DANGER,
                                 command=self.clear_history)
-        self.clear_btn.pack(padx=5, pady=5)
+        self.clear_btn.pack(side="left", padx=5, pady=5)
         # 创建历史记录列表容器
         list_container = tb.Frame(history_frame)
         list_container.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
