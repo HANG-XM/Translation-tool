@@ -385,9 +385,18 @@ class ConfigTabManager(BaseUIComponent):
         shortcuts_frame = tb.LabelFrame(parent, text="快捷键设置", padding=8, bootstyle=INFO)
         shortcuts_frame.pack(fill=X, pady=5)
 
-        for text in ["翻译:", "清空:", "截图翻译:"]:
-            entry = tb.Entry(shortcuts_frame, bootstyle=PRIMARY, font=('微软雅黑', 9))
-            entry.pack(fill=X, pady=2)
+        # 创建标签和输入框
+        tb.Label(shortcuts_frame, text="翻译:", font=('微软雅黑', 9)).pack(anchor="w", padx=5)
+        self.translate_shortcut = tb.Entry(shortcuts_frame, bootstyle=PRIMARY, font=('微软雅黑', 9))
+        self.translate_shortcut.pack(fill=X, pady=2)
+
+        tb.Label(shortcuts_frame, text="清空:", font=('微软雅黑', 9)).pack(anchor="w", padx=5)
+        self.clear_shortcut = tb.Entry(shortcuts_frame, bootstyle=PRIMARY, font=('微软雅黑', 9))
+        self.clear_shortcut.pack(fill=X, pady=2)
+
+        tb.Label(shortcuts_frame, text="截图翻译:", font=('微软雅黑', 9)).pack(anchor="w", padx=5)
+        self.capture_shortcut = tb.Entry(shortcuts_frame, bootstyle=PRIMARY, font=('微软雅黑', 9))
+        self.capture_shortcut.pack(fill=X, pady=2)
 
     def _create_format_settings(self, parent):
         """创建格式化设置区域"""
@@ -1101,20 +1110,29 @@ class UIManager:
     def _load_remaining_configs(self):
         """加载剩余配置"""
         try:
+            # 确保所有控件都已创建
+            if not all([hasattr(self.config_tab_manager, attr) for attr in [
+                'translate_shortcut', 'clear_shortcut', 'capture_shortcut',
+                'theme_var', 'format_var', 'export_format_var'
+            ]]):
+                self.root.after(100, self._load_remaining_configs)  # 延迟重试
+                return
+
             # 加载快捷键配置
-            if self.config_tab_manager:
-                self.config_tab_manager.load_shortcuts()
+            self.config_tab_manager.load_shortcuts()
             
             # 加载主题配置
             theme = self.settings_manager.load_theme()
-            if self.config_tab_manager:
-                self.config_tab_manager.theme_var.set(theme)
+            self.config_tab_manager.theme_var.set(theme)
             self.settings_manager.set_theme(theme)
             
             # 加载格式化配置
             format_type = self.settings_manager.load_format_type()
-            if self.config_tab_manager:
-                self.config_tab_manager.format_var.set(format_type)
+            self.config_tab_manager.format_var.set(format_type)
+            
+            # 加载导出格式配置
+            export_format = self.settings_manager.load_export_format()
+            self.config_tab_manager.export_format_var.set(export_format)
             
             # 加载语言配置
             source_lang, target_lang = self.settings_manager.load_languages()
