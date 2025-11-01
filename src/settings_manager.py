@@ -76,34 +76,6 @@ class ConfigManager:
                         pass
                 raise e
     
-    def load_config(self):
-        """加载配置"""
-        current_time = time.time()
-        if (self._config_cache is not None and 
-            current_time - self._config_cache_time < self._config_cache_timeout):
-            return self._config_cache
-            
-        if not os.path.exists(self.config_file):
-            return None, None
-
-        try:
-            with self._config_lock:
-                config = configparser.ConfigParser()
-                # 使用线程安全的读取方式
-                with open(self.config_file, 'r', encoding='utf-8') as f:
-                    config.read_file(f)
-                
-                if 'BaiduAPI' in config:
-                    appid = config['BaiduAPI'].get('appid', '')
-                    appkey = config['BaiduAPI'].get('appkey', '')
-                    self._update_cache(appid, appkey)
-                    return appid, appkey
-                
-                return None, None
-        except Exception as e:
-            logging.error(f"加载配置失败: {str(e)}")
-            return None, None
-    
     def save_shortcuts(self, shortcuts):
         """保存快捷键配置"""
         try:

@@ -43,23 +43,6 @@ class TranslationCache:
             self._cache[key] = (current_time, value)
             self._cache.move_to_end(key)
 
-    def add_to_history(self, source_text, target_text, from_lang, to_lang):
-        """添加翻译记录到历史"""
-        with self._lock:
-            current_time = time.strftime('%Y-%m-%d %H:%M:%S')
-            history_key = f"{current_time}_{hash(source_text)}"
-            
-            self._history[history_key] = {
-                'source_text': source_text,
-                'target_text': target_text,
-                'from_lang': from_lang,
-                'to_lang': to_lang,
-                'time': current_time
-            }
-            
-            if len(self._history) > self._max_history:
-                self._history.popitem(last=False)
-
     def get_history(self):
         """获取翻译历史"""
         with self._lock:
@@ -89,14 +72,6 @@ class TranslationCache:
             # 立即保存到文件
             if save_callback:
                 save_callback(self._history)
-class TextPreprocessor:
-    """文本预处理工具"""
-    @staticmethod
-    def clean_text(text):
-        """清理OCR识别可能产生的特殊字符"""
-        text = text.replace('|', 'I').replace('[]', '0').replace('O', '0')
-        lines = [line.strip() for line in text.split('\n') if line.strip()]
-        return '\n'.join(lines)
 
 class BaiduTranslator:
     def __init__(self, appid, appkey):
@@ -106,7 +81,6 @@ class BaiduTranslator:
         self.session = requests.Session()
         self.timeout = 10
         self.cache = TranslationCache()
-        self.preprocessor = TextPreprocessor()
         self.tts_engine = pyttsx3.init()  # 初始化语音引擎
         
         self._init_session()

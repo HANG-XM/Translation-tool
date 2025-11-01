@@ -51,25 +51,6 @@ class ErrorHandler:
         error_msg = f"{operation}失败: {str(error)}"
         logging.error(error_msg)
         Messagebox.show_error("错误", error_msg)
-class ConfigManager:
-    def __init__(self, settings_manager):
-        self.settings_manager = settings_manager
-        
-    def save_config(self, appid, appkey, shortcuts, theme, source_lang, target_lang):
-        try:
-            if self.settings_manager.save_all_config(appid, appkey, shortcuts, theme, source_lang, target_lang):
-                return True
-            return False
-        except Exception as e:
-            ErrorHandler.handle_error(e, "保存配置")
-            return False
-            
-    def load_config(self):
-        try:
-            return self.settings_manager.load_config()
-        except Exception as e:
-            ErrorHandler.handle_error(e, "加载配置")
-            return None, None
 class StatsManager:
     def __init__(self, settings_manager):
         self.settings_manager = settings_manager
@@ -1354,14 +1335,6 @@ class UIManager:
             logging.error(f"截图翻译失败: {str(e)}")
             Messagebox.show_error("错误", f"截图翻译失败: {str(e)}")
             self.root.deiconify()
-
-    def _minimize_and_capture(self):
-        """最小化窗口并执行截图"""
-        import pyautogui
-        self.root.iconify()
-        time.sleep(0.5)
-        screenshot = pyautogui.screenshot()
-        self._create_selection_window(screenshot)
 
     def _create_selection_window(self, screenshot):
         """创建选择窗口"""
