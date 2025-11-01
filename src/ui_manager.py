@@ -348,26 +348,30 @@ class ConfigTabManager(BaseUIComponent):
         right_column.pack(side=RIGHT, fill=BOTH, padx=(10, 0))
 
         # 在左列中创建设置区域
-        self._create_theme_settings(left_column)
         self._create_api_settings(left_column)
         self._create_shortcut_settings(left_column)
         self._create_format_settings(left_column)
         self._create_export_settings(left_column)
 
-        # 在右列中创建保存按钮
+        # 在右列中创建设置区域
+        self._create_theme_settings(right_column)
         self._create_save_button(right_column)
 
     def _create_theme_settings(self, parent):
         """创建主题设置区域"""
-        theme_frame = tb.LabelFrame(parent, text="界面主题", padding=8, bootstyle=INFO)
-        theme_frame.pack(fill=X, pady=(0, 5))
+        # 直接添加主题选择，不使用分组框
+        theme_container = tb.Frame(parent)
+        theme_container.pack(fill=X, pady=(0, 10))
 
+        tb.Label(theme_container, text="界面主题:", 
+                font=('微软雅黑', 10, 'bold')).pack(side="left", padx=5)
+        
         self.theme_var = tb.StringVar()
-        self.theme_combo = tb.Combobox(theme_frame, width=10, state="readonly",
+        self.theme_combo = tb.Combobox(theme_container, width=10, state="readonly",
                                     textvariable=self.theme_var, bootstyle=PRIMARY)
         self.theme_combo['values'] = ('白天', '黑夜')
         self.theme_combo.set('白天')
-        self.theme_combo.pack(pady=5)
+        self.theme_combo.pack(side="left", padx=5)
 
     def _create_api_settings(self, parent):
         """创建API设置区域"""
@@ -449,6 +453,10 @@ class ConfigTabManager(BaseUIComponent):
 
     def _create_save_button(self, parent):
         """创建保存按钮"""
+        # 添加分隔线
+        separator = tb.Frame(parent, height=1, bootstyle=SECONDARY)
+        separator.pack(fill=X, pady=(20, 10))
+        
         self.save_btn = tb.Button(parent, text="💾 保存配置", 
                                 bootstyle=SUCCESS, width=15)
         self.save_btn.pack(pady=10)
