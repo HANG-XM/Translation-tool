@@ -1,12 +1,12 @@
+import ttkbootstrap as tb
+from ttkbootstrap.dialogs import Messagebox
+
+import time
 import os
 import configparser
 import threading
 import logging
-import time
-from ttkbootstrap.dialogs import Messagebox
-import ttkbootstrap as tb
 import json
-import weakref
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 

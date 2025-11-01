@@ -1,19 +1,19 @@
+import tkinter as tk
 import ttkbootstrap as tb
 from ttkbootstrap.constants import *
 from ttkbootstrap.scrolled import ScrolledText
 from ttkbootstrap.dialogs import Messagebox
+
+import queue
 import threading
 import logging
 from concurrent.futures import ThreadPoolExecutor
 import os
 import time
-from translator import BaiduTranslator, TextFormatter
-import tkinter as tk
-import queue
 import pyautogui
 from collections import OrderedDict
-import weakref
-from functools import lru_cache
+
+from translator import BaiduTranslator, TextFormatter
 class BaseUIComponent:
     def __init__(self, parent, settings_manager):
         self.parent = parent

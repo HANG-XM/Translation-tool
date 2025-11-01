@@ -1,14 +1,12 @@
 import requests
 import random
 import hashlib
-import json
 import time
 import logging
 from collections import OrderedDict
 from urllib3.util.retry import Retry
 import threading
 import pyttsx3
-import asyncio
 from functools import lru_cache
 
 class TranslationCache:
