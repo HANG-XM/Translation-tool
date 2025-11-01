@@ -313,26 +313,6 @@ class TranslateTabManager(BaseUIComponent):
                                 bootstyle=INFO, width=10)
         self.export_btn.grid(row=0, column=4, padx=6, pady=2, sticky="ew")
 
-        # 添加格式化选项
-        format_frame = tb.LabelFrame(bottom_toolbar, text="格式化选项", padding=6, bootstyle=INFO)
-        format_frame.pack(side=TOP, padx=0, pady=(5,0), fill=X)
-
-        format_grid = tb.Frame(format_frame)
-        format_grid.pack(fill=X)
-
-        self.format_var = tb.StringVar(value="none")
-        formats = [
-            ("无格式", "none"),
-            ("保留换行", "keep_newline"),
-            ("添加标点", "add_punctuation"),
-            ("首字母大写", "capitalize"),
-            ("每句换行", "sentence_newline")
-        ]
-        
-        for i, (text, value) in enumerate(formats):
-            tb.Radiobutton(format_grid, text=text, variable=self.format_var, 
-                        value=value).grid(row=i//3, column=i%3, padx=5, pady=2, sticky="w")
-
         button_grid.columnconfigure(0, weight=1)
         button_grid.columnconfigure(1, weight=1)
         button_grid.columnconfigure(2, weight=1)
@@ -369,6 +349,7 @@ class ConfigTabManager(BaseUIComponent):
         self._create_theme_settings(left_panel)
         self._create_api_settings(left_panel)
         self._create_shortcut_settings(left_panel)
+        self._create_format_settings(left_panel)
         self._create_save_button(right_panel)
 
     def _create_theme_settings(self, parent):
@@ -419,6 +400,25 @@ class ConfigTabManager(BaseUIComponent):
             row=2, column=0, sticky="w", padx=5, pady=2)
         self.capture_shortcut = tb.Entry(shortcuts_frame, bootstyle=PRIMARY, font=('微软雅黑', 9))
         self.capture_shortcut.grid(row=2, column=1, padx=5, pady=2, sticky="ew")
+
+    def _create_format_settings(self, parent):
+        """创建格式化设置区域"""
+        format_frame = tb.LabelFrame(parent, text="格式化设置", padding=15, bootstyle=INFO)
+        format_frame.pack(fill=X, padx=5, pady=5)
+        format_frame.columnconfigure(1, weight=1)
+
+        self.format_var = tb.StringVar(value="none")
+        formats = [
+            ("无格式", "none"),
+            ("保留换行", "keep_newline"),
+            ("添加标点", "add_punctuation"),
+            ("首字母大写", "capitalize"),
+            ("每句换行", "sentence_newline")
+        ]
+        
+        for i, (text, value) in enumerate(formats):
+            tb.Radiobutton(format_frame, text=text, variable=self.format_var, 
+                        value=value).grid(row=i, column=0, padx=5, pady=2, sticky="w")
 
     def _create_save_button(self, parent):
         """创建保存按钮"""
@@ -1055,12 +1055,15 @@ class UIManager:
             # 保存主题配置
             theme = self.config_tab_manager.theme_var.get()
             
+            # 保存格式化配置
+            format_type = self.config_tab_manager.format_var.get()
+            
             # 保存语言配置
             source_lang = self.translate_tab_manager.source_lang.get()
             target_lang = self.translate_tab_manager.target_lang.get()
 
             # 保存所有配置
-            if self.settings_manager.save_all_config(appid, appkey, shortcuts, theme, source_lang, target_lang):
+            if self.settings_manager.save_all_config(appid, appkey, shortcuts, theme, source_lang, target_lang, format_type):
                 self.translator = BaiduTranslator(appid, appkey)
                 # 设置保存回调
                 self.translator.cache.save_callback = self.settings_manager.save_translation_history
@@ -1106,6 +1109,11 @@ class UIManager:
             if self.config_tab_manager:
                 self.config_tab_manager.theme_var.set(theme)
             self.settings_manager.set_theme(theme)
+            
+            # 加载格式化配置
+            format_type = self.settings_manager.load_format_type()
+            if self.config_tab_manager:
+                self.config_tab_manager.format_var.set(format_type)
             
             # 加载语言配置
             source_lang, target_lang = self.settings_manager.load_languages()

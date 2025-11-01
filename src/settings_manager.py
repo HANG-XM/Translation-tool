@@ -243,7 +243,7 @@ class SettingsManager:
         """设置主题"""
         self.theme_manager.set_theme(theme)
 
-    def save_all_config(self, appid, appkey, shortcuts, theme, source_lang=None, target_lang=None):
+    def save_all_config(self, appid, appkey, shortcuts, theme, source_lang=None, target_lang=None, format_type=None):
         """保存所有配置"""
         try:
             config = configparser.ConfigParser()
@@ -255,6 +255,8 @@ class SettingsManager:
                     'source_lang': source_lang,
                     'target_lang': target_lang
                 }
+            if format_type:
+                config['Format'] = {'format_type': format_type}
             
             temp_file = self.config_manager.config_file + '.tmp'
             with open(temp_file, 'w', encoding='utf-8') as f:
@@ -268,6 +270,22 @@ class SettingsManager:
             if os.path.exists(temp_file):
                 os.remove(temp_file)
             raise e
+
+    def load_format_type(self):
+        """加载格式化配置"""
+        try:
+            if not os.path.exists(self.config_manager.config_file):
+                return 'none'
+            
+            config = configparser.ConfigParser()
+            config.read(self.config_manager.config_file, encoding='utf-8')
+            
+            if 'Format' in config:
+                return config['Format'].get('format_type', 'none')
+            return 'none'
+        except Exception as e:
+            logging.error(f"加载格式化配置失败: {str(e)}")
+            return 'none'
     
     def load_theme(self):
         """加载主题配置"""
